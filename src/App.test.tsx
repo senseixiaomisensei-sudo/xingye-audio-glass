@@ -19,6 +19,16 @@ describe('xingye audio glass homepage', () => {
     expect(screen.getByText('RunComfy video asset route')).toBeInTheDocument()
   })
 
+  it('publishes the audio enhancement research plan on the homepage', () => {
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: '功能研发路线，先跑通本地增强。' })).toBeInTheDocument()
+    expect(screen.getByText('MVP-1 浏览器本地预览')).toBeInTheDocument()
+    expect(screen.getByText('导入与解码')).toBeInTheDocument()
+    expect(screen.getByText('MVP 模块边界')).toBeInTheDocument()
+    expect(screen.getByText('禁止抓取平台受保护音频、绕过 DRM 或宣传低码率恢复真无损。')).toBeInTheDocument()
+  })
+
   it('keeps upload and platform import modes local', async () => {
     const user = userEvent.setup()
     render(<App />)

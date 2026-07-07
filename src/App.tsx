@@ -121,6 +121,44 @@ const foundation = [
   },
 ]
 
+const researchPhases = [
+  {
+    title: '导入与解码',
+    signal: 'File API / AudioContext',
+    body: '本地选择音频文件，读取时长、声道和采样率，并稳定截取 15-30 秒预览片段。',
+  },
+  {
+    title: '分析与 A/B 基线',
+    signal: 'Peak / RMS / preview cache',
+    body: '先建立原音预览和峰值、RMS、简易响度分析，确保增强前后可同位对比。',
+  },
+  {
+    title: 'MVP DSP 链',
+    signal: 'EQ / compressor / limiter',
+    body: '用保守母带整理路线做响度、EQ、轻压缩和限幅，避免削波和过度染色。',
+  },
+  {
+    title: 'WAV 导出与稳定性',
+    signal: 'WAV encoder / worker-ready',
+    body: '先导出增强后的 WAV 预览片段，并为大文件处理、错误提示和后台渲染预留边界。',
+  },
+]
+
+const mvpModules = [
+  'features/audio-lab',
+  'audio/decode',
+  'audio/analyze',
+  'audio/dsp',
+  'audio/export',
+  'workers/audioPreview',
+]
+
+const guardrails = [
+  '禁止抓取平台受保护音频、绕过 DRM 或宣传低码率恢复真无损。',
+  '192kHz / 24-bit 只能作为导出规格，不能承诺恢复原始母带信息。',
+  'MP3、FLAC、AAC 等完整多格式导出后置到 FFmpeg 或后端任务队列。',
+]
+
 const barsBefore = [26, 38, 31, 46, 35, 52, 44, 58, 39, 48, 34, 43]
 const barsAfter = [45, 66, 54, 78, 61, 88, 72, 94, 58, 81, 64, 74]
 
@@ -174,6 +212,7 @@ function App() {
       <SpecRail />
       <PipelineSection />
       <FoundationSection />
+      <ResearchPlanSection />
       <Footer />
     </main>
   )
@@ -320,6 +359,9 @@ function Header() {
           </a>
           <a className="transition hover:text-white" href="#foundation">
             扩展
+          </a>
+          <a className="transition hover:text-white" href="#research-plan">
+            计划
           </a>
           <a className="transition hover:text-white" href="#specs">
             规格
@@ -667,6 +709,81 @@ function FoundationSection() {
               )
             })}
           </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ResearchPlanSection() {
+  return (
+    <section id="research-plan" className="research-section px-4 py-20 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1180px]">
+        <div className="grid gap-7 lg:grid-cols-[0.95fr_1.05fr] lg:items-end">
+          <div>
+            <div className="glass-chip mb-5 inline-flex items-center gap-2">
+              <Activity size={15} />
+              <span>MVP-1 浏览器本地预览</span>
+            </div>
+            <h2 className="text-4xl font-medium leading-tight md:text-5xl">
+              功能研发路线，先跑通本地增强。
+            </h2>
+          </div>
+          <p className="max-w-2xl text-base leading-8 text-white/62">
+            真实音频增强先从本地文件、短片段预览和 WAV 导出开始。平台链接只做合规入口和元信息，
+            生产级多格式转码、AI 降噪、源分离和云端队列放到后续阶段。
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-3 lg:grid-cols-4">
+          {researchPhases.map((phase, index) => (
+            <article className="research-card" key={phase.title}>
+              <span className="research-index">{String(index + 1).padStart(2, '0')}</span>
+              <p className="research-signal">{phase.signal}</p>
+              <h3 className="mt-3 text-lg font-medium">{phase.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-white/58">{phase.body}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
+          <article className="research-panel">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="research-signal">module boundary</p>
+                <h3 className="mt-2 text-xl font-medium">MVP 模块边界</h3>
+              </div>
+              <span className="foundation-icon">
+                <Layers3 size={20} />
+              </span>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {mvpModules.map((module) => (
+                <span className="module-token" key={module}>
+                  {module}
+                </span>
+              ))}
+            </div>
+          </article>
+
+          <article className="research-panel">
+            <div className="flex items-start gap-3">
+              <span className="foundation-icon">
+                <ShieldCheck size={20} />
+              </span>
+              <div>
+                <p className="research-signal">product guardrails</p>
+                <h3 className="mt-2 text-xl font-medium">上线口径和合规边界</h3>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-2">
+              {guardrails.map((item) => (
+                <p className="guardrail-row" key={item}>
+                  {item}
+                </p>
+              ))}
+            </div>
+          </article>
         </div>
       </div>
     </section>
