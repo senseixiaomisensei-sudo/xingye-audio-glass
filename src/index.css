@@ -375,6 +375,54 @@ a:focus-visible {
   min-height: 0;
 }
 
+.track-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.2);
+  padding: 0.75rem 0.85rem;
+}
+
+.track-card h3 {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.source-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  border: 1px solid rgba(154, 248, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(154, 248, 255, 0.12);
+  color: rgba(214, 252, 255, 0.88);
+  padding: 0.42rem 0.62rem;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-align: center;
+  transition:
+    border-color 180ms var(--ease),
+    background 180ms var(--ease),
+    transform 180ms var(--ease);
+}
+
+.source-link:hover {
+  border-color: rgba(154, 248, 255, 0.42);
+  background: rgba(154, 248, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.source-link.as-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .record-disc {
   position: relative;
   display: grid;
@@ -390,6 +438,11 @@ a:focus-visible {
     inset 0 0 52px rgba(0, 0, 0, 0.54),
     0 26px 70px rgba(0, 0, 0, 0.45);
   animation: slow-spin 18s linear infinite;
+  animation-play-state: paused;
+}
+
+.record-disc.is-playing {
+  animation-play-state: running;
 }
 
 .record-core {
@@ -410,7 +463,31 @@ a:focus-visible {
   border-radius: 999px 999px 0.35rem 0.35rem;
   background: linear-gradient(180deg, #ffffff, var(--accent-aqua) 45%, var(--accent-blue));
   transform-origin: bottom;
-  animation: wave-pulse 1.7s ease-in-out infinite;
+  transition:
+    height 90ms linear,
+    opacity 140ms var(--ease),
+    filter 140ms var(--ease);
+}
+
+.live-waveform {
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -18px 42px rgba(120, 167, 255, 0.12);
+}
+
+.live-waveform.is-playing .wave-bar {
+  filter: drop-shadow(0 0 10px rgba(154, 248, 255, 0.42));
+}
+
+.enhance-chain {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.58);
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  font-size: 0.76rem;
 }
 
 .preview-button {
@@ -436,13 +513,26 @@ a:focus-visible {
 
 .play-button {
   display: grid;
-  width: 2.75rem;
+  width: 3.15rem;
   height: 2.75rem;
+  grid-template-rows: 1fr auto;
+  gap: 0.05rem;
   place-items: center;
   border-radius: 999px;
   color: #061016;
   background: white;
+  padding: 0.42rem 0.35rem 0.34rem;
   transition: transform 180ms var(--ease);
+}
+
+.play-button svg {
+  pointer-events: none;
+}
+
+.play-button-text {
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .preview-button:hover,

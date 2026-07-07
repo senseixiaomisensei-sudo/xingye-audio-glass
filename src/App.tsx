@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
   AudioLines,
@@ -22,12 +22,34 @@ import {
 type SourceMode = 'upload' | 'platform'
 type PreviewMode = 'before' | 'after'
 type TierId = 'clean' | 'studio' | 'master' | 'hires'
+type AudioSource = {
+  kind: 'demo' | 'upload'
+  title: string
+  artist: string
+  previewUrl: string
+  sourceLabel: string
+  ariaLabel: string
+  collection?: string
+  sourceUrl?: string
+}
 
 const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
 
 const heroMedia = {
   poster: assetPath('/motion-sites/audio-showcase.webp'),
   video: assetPath('/motion-sites/audio-showcase.mp4'),
+}
+
+const defaultAudioSource: AudioSource = {
+  kind: 'demo',
+  title: 'Unwelcome School',
+  artist: 'Mitsukiyo',
+  collection: 'Blue Archive 3rd Anniversary (Original Soundtrack)',
+  sourceLabel: 'Apple Music 官方预览',
+  sourceUrl: 'https://music.apple.com/us/album/unwelcome-school/1783092895?i=1783092896&uo=4',
+  previewUrl:
+    'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/4b/1f/07/4b1f0740-8d7c-45e2-cce3-d12cb8e66f15/mzaf_14400797571439858173.plus.aac.p.m4a',
+  ariaLabel: '蔚蓝档案默认试听源',
 }
 
 const specs = ['MP3', 'FLAC', 'WAV', 'AAC', 'OGG', 'M4A', 'AIFF', '192kHz', '320kbps', '24-bit 位深']
@@ -166,43 +188,68 @@ function App() {
   const [sourceMode, setSourceMode] = useState<SourceMode>('upload')
   const [previewMode, setPreviewMode] = useState<PreviewMode>('after')
   const [selectedTier, setSelectedTier] = useState<TierId>('studio')
-  const [fileName, setFileName] = useState('')
+  const [uploadedSource, setUploadedSource] = useState<AudioSource | null>(null)
   const [platformUrl, setPlatformUrl] = useState('')
-  const [isPlaying, setIsPlaying] = useState(true)
-  const [progress, setProgress] = useState(42)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [exportStatus, setExportStatus] = useState('')
+  const uploadedUrlRef = useRef<string | null>(null)
 
   const activeTier = useMemo(
     () => tiers.find((tier) => tier.id === selectedTier) ?? tiers[1],
     [selectedTier],
   )
 
-  useEffect(() => {
-    if (!isPlaying) {
+  const audioSource = uploadedSource ?? defaultAudioSource
+  const fileName = uploadedSource?.title ?? ''
+
+  const handleFileSelected = useCallback((file: File | null) => {
+    if (uploadedUrlRef.current) {
+      globalThis.URL.revokeObjectURL(uploadedUrlRef.current)
+      uploadedUrlRef.current = null
+    }
+
+    if (!file) {
+      setUploadedSource(null)
+      setIsPlaying(false)
       return
     }
 
-    const timer = window.setInterval(() => {
-      setProgress((current) => (current >= 91 ? 28 : current + 3))
-    }, 1000)
+    const previewUrl = createObjectAudioUrl(file)
+    uploadedUrlRef.current = previewUrl || null
+    setUploadedSource({
+      kind: 'upload',
+      title: file.name,
+      artist: '本地文件',
+      previewUrl,
+      sourceLabel: '本地上传预览',
+      ariaLabel: '上传音频预览源',
+    })
+    setSourceMode('upload')
+    setIsPlaying(false)
+  }, [])
 
-    return () => window.clearInterval(timer)
-  }, [isPlaying])
+  useEffect(() => {
+    return () => {
+      if (uploadedUrlRef.current) {
+        globalThis.URL.revokeObjectURL(uploadedUrlRef.current)
+      }
+    }
+  }, [])
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050507] text-slate-50">
       <Hero
         activeTier={activeTier}
+        audioSource={audioSource}
         exportStatus={exportStatus}
         fileName={fileName}
         isPlaying={isPlaying}
         platformUrl={platformUrl}
         previewMode={previewMode}
-        progress={progress}
         selectedTier={selectedTier}
         sourceMode={sourceMode}
-        onFileNameChange={setFileName}
         onExportRequest={() => setExportStatus(`${activeTier.name} 已加入本地导出队列`)}
+        onFileSelected={handleFileSelected}
         onPlatformUrlChange={setPlatformUrl}
         onPlayingChange={setIsPlaying}
         onPreviewModeChange={setPreviewMode}
@@ -220,16 +267,16 @@ function App() {
 
 function Hero({
   activeTier,
+  audioSource,
   exportStatus,
   fileName,
   isPlaying,
   platformUrl,
   previewMode,
-  progress,
   selectedTier,
   sourceMode,
-  onFileNameChange,
   onExportRequest,
+  onFileSelected,
   onPlatformUrlChange,
   onPlayingChange,
   onPreviewModeChange,
@@ -237,16 +284,16 @@ function Hero({
   onTierChange,
 }: {
   activeTier: (typeof tiers)[number]
+  audioSource: AudioSource
   exportStatus: string
   fileName: string
   isPlaying: boolean
   platformUrl: string
   previewMode: PreviewMode
-  progress: number
   selectedTier: TierId
   sourceMode: SourceMode
-  onFileNameChange: (value: string) => void
   onExportRequest: () => void
+  onFileSelected: (file: File | null) => void
   onPlatformUrlChange: (value: string) => void
   onPlayingChange: (value: boolean) => void
   onPreviewModeChange: (value: PreviewMode) => void
@@ -292,17 +339,17 @@ function Hero({
             platformUrl={platformUrl}
             selectedTier={selectedTier}
             sourceMode={sourceMode}
-            onFileNameChange={onFileNameChange}
+            onFileSelected={onFileSelected}
             onPlatformUrlChange={onPlatformUrlChange}
             onSourceModeChange={onSourceModeChange}
             onTierChange={onTierChange}
           />
           <PlayerPanel
             activeTier={activeTier}
+            audioSource={audioSource}
             exportStatus={exportStatus}
             isPlaying={isPlaying}
             previewMode={previewMode}
-            progress={progress}
             onExportRequest={onExportRequest}
             onPlayingChange={onPlayingChange}
             onPreviewModeChange={onPreviewModeChange}
@@ -391,7 +438,7 @@ function ImportConsole({
   platformUrl,
   selectedTier,
   sourceMode,
-  onFileNameChange,
+  onFileSelected,
   onPlatformUrlChange,
   onSourceModeChange,
   onTierChange,
@@ -401,7 +448,7 @@ function ImportConsole({
   platformUrl: string
   selectedTier: TierId
   sourceMode: SourceMode
-  onFileNameChange: (value: string) => void
+  onFileSelected: (file: File | null) => void
   onPlatformUrlChange: (value: string) => void
   onSourceModeChange: (value: SourceMode) => void
   onTierChange: (value: TierId) => void
@@ -456,7 +503,7 @@ function ImportConsole({
               className="sr-only"
               type="file"
               accept=".mp3,.flac,.wav,.aac,.ogg,.m4a,.aiff,audio/*"
-              onChange={(event) => onFileNameChange(event.currentTarget.files?.[0]?.name ?? '')}
+              onChange={(event) => onFileSelected(event.currentTarget.files?.[0] ?? null)}
             />
             <UploadCloud size={24} />
             <span className="mt-2 text-sm text-white">{fileName || '拖入或选择 MP3 / FLAC / WAV'}</span>
@@ -526,29 +573,318 @@ function TierButton({
   )
 }
 
+function createObjectAudioUrl(file: File) {
+  if (typeof globalThis.URL?.createObjectURL !== 'function') {
+    return ''
+  }
+
+  try {
+    return globalThis.URL.createObjectURL(file)
+  } catch {
+    return ''
+  }
+}
+
+function supportsRealtimeAudio() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const audioWindow = window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }
+  return typeof (audioWindow.AudioContext ?? audioWindow.webkitAudioContext) === 'function'
+}
+
+function formatTime(totalSeconds: number) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return '0:00'
+  }
+
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = Math.floor(totalSeconds % 60)
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      },
+      (error: unknown) => {
+        window.clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 function PlayerPanel({
   activeTier,
+  audioSource,
   exportStatus,
   isPlaying,
   previewMode,
-  progress,
   onExportRequest,
   onPlayingChange,
   onPreviewModeChange,
 }: {
   activeTier: (typeof tiers)[number]
+  audioSource: AudioSource
   exportStatus: string
   isPlaying: boolean
   previewMode: PreviewMode
-  progress: number
   onExportRequest: () => void
   onPlayingChange: (value: boolean) => void
   onPreviewModeChange: (value: PreviewMode) => void
 }) {
-  const bars = previewMode === 'after' ? barsAfter : barsBefore
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const dryGainRef = useRef<GainNode | null>(null)
+  const wetGainRef = useRef<GainNode | null>(null)
+  const lastPlayerActivationRef = useRef(Number.NEGATIVE_INFINITY)
+  const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [audioError, setAudioError] = useState('')
+  const [bars, setBars] = useState(previewMode === 'after' ? barsAfter : barsBefore)
+  const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
+
+  const getAudioElement = useCallback(
+    () => audioRef.current ?? document.querySelector<HTMLAudioElement>('[data-player-audio="preview"]'),
+    [],
+  )
+
+  const applyPreviewMode = useCallback((mode: PreviewMode) => {
+    const context = audioContextRef.current
+    const dryGain = dryGainRef.current
+    const wetGain = wetGainRef.current
+
+    if (!context || !dryGain || !wetGain) {
+      return
+    }
+
+    const now = context.currentTime
+    dryGain.gain.cancelScheduledValues(now)
+    wetGain.gain.cancelScheduledValues(now)
+    dryGain.gain.setTargetAtTime(mode === 'before' ? 1 : 0, now, 0.035)
+    wetGain.gain.setTargetAtTime(mode === 'after' ? 1 : 0, now, 0.035)
+  }, [])
+
+  const setupAudioGraph = useCallback(() => {
+    const audio = getAudioElement()
+    const audioWindow = window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }
+    const AudioContextConstructor = audioWindow.AudioContext ?? audioWindow.webkitAudioContext
+
+    if (!audio || !AudioContextConstructor) {
+      return null
+    }
+
+    const context = audioContextRef.current ?? new AudioContextConstructor()
+    audioContextRef.current = context
+
+    if (!sourceNodeRef.current) {
+      const source = context.createMediaElementSource(audio)
+      const dryGain = context.createGain()
+      const wetGain = context.createGain()
+      const lowShelf = context.createBiquadFilter()
+      const presence = context.createBiquadFilter()
+      const air = context.createBiquadFilter()
+      const compressor = context.createDynamicsCompressor()
+      const makeupGain = context.createGain()
+      const analyser = context.createAnalyser()
+
+      analyser.fftSize = 128
+      analyser.smoothingTimeConstant = 0.68
+
+      lowShelf.type = 'lowshelf'
+      lowShelf.frequency.value = 96
+      lowShelf.gain.value = 2.1
+
+      presence.type = 'peaking'
+      presence.frequency.value = 2600
+      presence.Q.value = 0.9
+      presence.gain.value = 1.8
+
+      air.type = 'highshelf'
+      air.frequency.value = 7200
+      air.gain.value = 4.4
+
+      compressor.threshold.value = -20
+      compressor.knee.value = 18
+      compressor.ratio.value = 2.35
+      compressor.attack.value = 0.006
+      compressor.release.value = 0.18
+
+      makeupGain.gain.value = 1.08
+
+      source.connect(dryGain)
+      dryGain.connect(analyser)
+      source.connect(lowShelf)
+      lowShelf.connect(presence)
+      presence.connect(air)
+      air.connect(compressor)
+      compressor.connect(makeupGain)
+      makeupGain.connect(wetGain)
+      wetGain.connect(analyser)
+      analyser.connect(context.destination)
+
+      sourceNodeRef.current = source
+      dryGainRef.current = dryGain
+      wetGainRef.current = wetGain
+      analyserRef.current = analyser
+    }
+
+    applyPreviewMode(previewMode)
+    return context
+  }, [applyPreviewMode, getAudioElement, previewMode])
+
+  const handlePlayPause = useCallback(async () => {
+    try {
+      const audio = getAudioElement()
+
+      if (!audio) {
+        setAudioError('播放器音频节点还未准备好')
+        return
+      }
+
+      if (isPlaying) {
+        audio.pause()
+        setAudioError('')
+        onPlayingChange(false)
+        return
+      }
+
+      if (!audioSource.previewUrl) {
+        setAudioError('当前音频无法在浏览器里预览')
+        return
+      }
+
+      const context = setupAudioGraph()
+      if (!context) {
+        setAudioError('当前浏览器不支持 Web Audio 实时增强')
+        return
+      }
+      if (context.state === 'suspended') {
+        await withTimeout(context.resume(), 1800, 'audio-context-timeout')
+      }
+      await withTimeout(audio.play(), 2400, 'audio-play-timeout')
+      setAudioError('')
+      onPlayingChange(true)
+    } catch (error) {
+      setAudioError(
+        error instanceof Error && error.message === 'audio-context-timeout'
+          ? '浏览器阻止了 Web Audio 启动，请再点一次播放'
+          : '浏览器阻止了播放，请再点一次播放',
+      )
+      onPlayingChange(false)
+    }
+  }, [audioSource.previewUrl, getAudioElement, isPlaying, onPlayingChange, setupAudioGraph])
+
+  const activatePlayer = useCallback(() => {
+    const now = Date.now()
+    if (now - lastPlayerActivationRef.current < 260) {
+      return
+    }
+
+    lastPlayerActivationRef.current = now
+    setAudioError('正在启动试听...')
+    void handlePlayPause()
+  }, [handlePlayPause])
+
+  useEffect(() => {
+    applyPreviewMode(previewMode)
+
+    if (!isPlaying) {
+      setBars(previewMode === 'after' ? barsAfter : barsBefore)
+    }
+  }, [applyPreviewMode, isPlaying, previewMode])
+
+  useEffect(() => {
+    const audio = audioRef.current
+
+    if (!audio) {
+      return
+    }
+
+    if (supportsRealtimeAudio()) {
+      audio.pause()
+      audio.load()
+    }
+    setCurrentTime(0)
+    setDuration(0)
+    setAudioError('')
+    onPlayingChange(false)
+  }, [audioSource.previewUrl, onPlayingChange])
+
+  useEffect(() => {
+    const audio = audioRef.current
+
+    if (!audio) {
+      return
+    }
+
+    const handleLoadedMetadata = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleEnded = () => onPlayingChange(false)
+    const handleError = () => setAudioError('试听源暂时无法加载')
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('error', handleError)
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('error', handleError)
+    }
+  }, [onPlayingChange])
+
+  useEffect(() => {
+    let frameId = 0
+    const samples = new Uint8Array(64)
+
+    const tick = () => {
+      const analyser = analyserRef.current
+      const audio = getAudioElement()
+
+      if (analyser && audio && !audio.paused && !audio.ended) {
+        analyser.getByteFrequencyData(samples)
+        const bucketSize = Math.max(1, Math.floor(samples.length / 12))
+        const nextBars = Array.from({ length: 12 }, (_, index) => {
+          const start = index * bucketSize
+          const bucket = samples.slice(start, start + bucketSize)
+          const average = bucket.reduce((sum, value) => sum + value, 0) / Math.max(bucket.length, 1)
+          const modeLift = previewMode === 'after' ? 8 : 0
+          return Math.round(Math.min(96, Math.max(14, 18 + (average / 255) * 74 + modeLift)))
+        })
+        setBars(nextBars)
+      }
+
+      frameId = window.requestAnimationFrame(tick)
+    }
+
+    frameId = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(frameId)
+  }, [getAudioElement, previewMode])
 
   return (
     <aside className="liquid-panel glass-pane player-panel p-4" aria-label="沉浸播放器">
+      <audio
+        ref={audioRef}
+        aria-label={audioSource.ariaLabel}
+        className="sr-only"
+        crossOrigin="anonymous"
+        data-player-audio="preview"
+        preload="metadata"
+        src={audioSource.previewUrl}
+      />
+
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm text-fuchsia-100/70">沉浸播放器</p>
@@ -557,28 +893,49 @@ function PlayerPanel({
         <span className="rounded-full bg-cyan-300/16 px-3 py-1 text-xs text-cyan-100">local demo</span>
       </div>
 
-      <div className="record-disc mx-auto mt-4">
+      <div className="track-card mt-3">
+        <div>
+          <p className="text-xs text-cyan-100/62">蔚蓝档案</p>
+          <h3 className="mt-1 text-base font-medium leading-tight">{audioSource.title}</h3>
+          <p className="mt-1 text-xs text-white/48">{audioSource.artist}</p>
+        </div>
+        {audioSource.sourceUrl ? (
+          <a className="source-link" href={audioSource.sourceUrl} rel="noreferrer" target="_blank">
+            {audioSource.sourceLabel}
+          </a>
+        ) : (
+          <span className="source-link as-label">{audioSource.sourceLabel}</span>
+        )}
+      </div>
+
+      <div className={`record-disc mx-auto mt-4 ${isPlaying ? 'is-playing' : ''}`}>
         <div className="record-core">
           <Radio size={34} />
         </div>
       </div>
 
-      <div className="mt-4 grid h-20 grid-cols-12 items-end gap-1.5 rounded-2xl bg-black/26 px-3 py-3">
+      <div
+        aria-label="实时音乐频谱音浪"
+        className={`live-waveform mt-4 grid h-20 grid-cols-12 items-end gap-1.5 rounded-2xl bg-black/26 px-3 py-3 ${
+          isPlaying ? 'is-playing' : ''
+        }`}
+        data-live-waveform="true"
+      >
         {bars.map((height, index) => (
           <span
             className="wave-bar"
             key={`${previewMode}-${index}`}
-            style={{ height: `${height}%`, animationDelay: `${index * 72}ms` }}
+            style={{ height: `${height}%`, transitionDelay: `${index * 12}ms` }}
           />
         ))}
       </div>
 
       <div className="mt-3 h-2 rounded-full bg-white/12">
-        <div className="h-full rounded-full bg-cyan-200 transition-[width] duration-700" style={{ width: `${progress}%` }} />
+        <div className="h-full rounded-full bg-cyan-200 transition-[width] duration-300" style={{ width: `${progress}%` }} />
       </div>
       <div className="mt-2 flex justify-between text-xs text-white/46">
-        <span>0:{String(Math.round(progress / 2)).padStart(2, '0')}</span>
-        <span>-1:24</span>
+        <span>{formatTime(currentTime)}</span>
+        <span>-{formatTime(Math.max(duration - currentTime, 0) || 30)}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-[1fr_auto_1fr] gap-2">
@@ -594,9 +951,17 @@ function PlayerPanel({
           className="play-button"
           type="button"
           aria-label={isPlaying ? '暂停演示' : '播放演示'}
-          onClick={() => onPlayingChange(!isPlaying)}
+          onClick={activatePlayer}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              activatePlayer()
+            }
+          }}
+          onPointerDown={activatePlayer}
         >
           {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+          <span className="play-button-text">{isPlaying ? '暂停' : '播放'}</span>
         </button>
         <button
           aria-pressed={previewMode === 'after'}
@@ -608,12 +973,14 @@ function PlayerPanel({
         </button>
       </div>
 
+      <p className="enhance-chain mt-3">真实 A/B 增强链路</p>
+
       <button className="export-button mt-3" type="button" aria-label="导出增强后的音频" onClick={onExportRequest}>
         <Download size={16} />
         <span>加入导出队列</span>
       </button>
       <p className="mt-2 min-h-5 text-center text-xs text-cyan-100/64" aria-live="polite">
-        {exportStatus || '本地演示，不会上传文件'}
+        {audioError || exportStatus || '本地演示，不会上传文件'}
       </p>
     </aside>
   )

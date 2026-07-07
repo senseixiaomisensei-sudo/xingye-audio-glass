@@ -35,12 +35,31 @@ describe('xingye audio glass homepage', () => {
 
     const fileInput = screen.getByLabelText('选择音频文件')
     await user.upload(fileInput, new File(['audio'], 'xingye-master.flac', { type: 'audio/flac' }))
-    expect(screen.getByText('xingye-master.flac')).toBeInTheDocument()
+    expect(screen.getAllByText('xingye-master.flac').length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: /xingye-master\.flac/ })).toBeInTheDocument()
+    expect(screen.getByText('本地上传预览')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: '平台链接' }))
     const urlInput = screen.getByPlaceholderText('粘贴音乐平台链接，后续接解析与授权')
     await user.type(urlInput, 'https://music.example/song/123')
     expect(urlInput).toHaveValue('https://music.example/song/123')
+  })
+
+  it('loads a lawful Blue Archive preview track and live waveform surface by default', () => {
+    render(<App />)
+
+    expect(screen.getByText('Unwelcome School')).toBeInTheDocument()
+    expect(screen.getByText('Mitsukiyo')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Apple Music 官方预览' })).toHaveAttribute(
+      'href',
+      'https://music.apple.com/us/album/unwelcome-school/1783092895?i=1783092896&uo=4',
+    )
+    expect(screen.getByLabelText('蔚蓝档案默认试听源')).toHaveAttribute(
+      'src',
+      expect.stringContaining('audio-ssl.itunes.apple.com'),
+    )
+    expect(screen.getByLabelText('实时音乐频谱音浪')).toHaveAttribute('data-live-waveform', 'true')
+    expect(screen.getByText('真实 A/B 增强链路')).toBeInTheDocument()
   })
 
   it('switches enhancement tiers and A/B player state', async () => {
