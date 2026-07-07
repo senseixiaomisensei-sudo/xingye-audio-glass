@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="星野的mp3">
+  <rect width="64" height="64" rx="18" fill="#050507"/>
+  <path d="M18 40V24M27 46V18M36 42V22M45 36V28" fill="none" stroke="#8ff7ff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M18 40V24M27 46V18M36 42V22M45 36V28" fill="none" stroke="#ff75c8" stroke-width="2" stroke-linecap="round" opacity=".65"/>
+</svg>
