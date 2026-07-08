@@ -1,56 +1,65 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createSoftLimiterCurve,
-  dbToGain,
   enhancementProfiles,
   getEnhancementProfile,
   getParameterRows,
+  type EnhancementTierId,
 } from './audioEnhancement'
 
-describe('audio enhancement profiles', () => {
-  it('exposes concrete before and after parameters for Studio Bloom', () => {
-    const studio = getEnhancementProfile('studio')
-    const rows = getParameterRows('studio')
+const tierIds: EnhancementTierId[] = ['clean', 'studio', 'master', 'hires']
 
-    expect(studio.dspName).toBe('Studio Bloom DSP')
-    expect(rows.before).toContain('旁路直通 0 dB')
-    expect(rows.after).toEqual(expect.arrayContaining([
-      '低频架 +6.0 dB @ 88 Hz',
-      '低中频清理 -3.4 dB @ 410 Hz',
-      '存在感 +5.0 dB @ 2.5 kHz',
-      '压缩 -30 dB / 4.2:1',
-      '输出 +5.6 dB / 峰值 -1.0 dBTP',
-      '声场宽度 122%',
-    ]))
+describe('audio enhancement profiles', () => {
+  it('exports four reusable enhancement tiers', () => {
+    expect(enhancementProfiles.map((profile) => profile.id)).toEqual(tierIds)
+    expect(enhancementProfiles).toHaveLength(4)
   })
 
-  it('keeps every enhanced profile under the published true-peak ceiling', () => {
-    for (const profile of Object.values(enhancementProfiles)) {
-      expect(profile.outputCeilingDbtp).toBeLessThanOrEqual(-1)
-      expect(profile.outputGainDb).toBeGreaterThan(0)
+  it('returns a stable profile and falls back to studio for unknown tier ids', () => {
+    expect(getEnhancementProfile('master').id).toBe('master')
+    expect(getEnhancementProfile('missing-tier').id).toBe('studio')
+  })
+
+  it('keeps every tier displayable through App-compatible before and after rows', () => {
+    for (const tierId of tierIds) {
+      const profile = getEnhancementProfile(tierId)
+      const rows = getParameterRows(tierId)
+
+      expect(profile.eqBands).toEqual([profile.lowShelf, profile.body, profile.presence, profile.air])
+      expect(rows.before).toContain('旁路直通 0 dB')
+      expect(rows.after.length).toBeGreaterThanOrEqual(12)
+      expect(rows.after.some((row) => row.includes('wet mix'))).toBe(true)
+      expect(rows.after.some((row) => row.includes('dB'))).toBe(true)
+      expect(rows.after.some((row) => row.includes('Hz') || row.includes('kHz'))).toBe(true)
+      expect(rows.after.some((row) => row.includes('dBFS'))).toBe(true)
+      expect(rows.after.some((row) => row.includes('%'))).toBe(true)
+      expect(rows.after.some((row) => row.includes('LUFS'))).toBe(true)
     }
   })
 
-  it('makes higher tiers audibly stronger than the default studio profile', () => {
-    const studio = getEnhancementProfile('studio')
-    const master = getEnhancementProfile('master')
-    const hires = getEnhancementProfile('hires')
+  it('keeps the hifi profiles transparent instead of effect-heavy', () => {
+    for (const tierId of tierIds) {
+      const profile = getEnhancementProfile(tierId)
+      const gains = profile.eqBands.map((band) => Math.abs(band.gainDb))
+      const rows = getParameterRows(tierId).after.join(' ')
 
-    expect(master.lowShelf.gainDb).toBeGreaterThan(studio.lowShelf.gainDb)
-    expect(master.compressor.ratio).toBeGreaterThan(studio.compressor.ratio)
-    expect(hires.air.gainDb).toBeGreaterThan(studio.air.gainDb)
-    expect(hires.outputGainDb).toBeGreaterThan(studio.outputGainDb)
+      expect(Math.max(...gains)).toBeLessThanOrEqual(1.5)
+      expect(profile.compressor.ratio).toBeLessThanOrEqual(1.35)
+      expect(profile.outputGainDb).toBeLessThanOrEqual(0.8)
+      expect(profile.stereoWidthPercent).toBe(100)
+      expect(rows).not.toMatch(/软限幅|饱和|混响|空间|扩展|reverb|saturation|widener/i)
+    }
   })
 
-  it('creates a soft limiter curve that respects the published true-peak ceiling', () => {
-    const studio = getEnhancementProfile('studio')
-    const ceilingGain = dbToGain(studio.outputCeilingDbtp)
-    const curve = createSoftLimiterCurve(studio.limiterDrive, ceilingGain, 257)
-    const maxSample = Math.max(...Array.from(curve))
-    const minSample = Math.min(...Array.from(curve))
+  it('documents browser-safe peak protection without claiming source restoration', () => {
+    for (const tierId of tierIds) {
+      const profile = getEnhancementProfile(tierId)
 
-    expect(maxSample).toBeLessThanOrEqual(ceilingGain)
-    expect(minSample).toBeGreaterThanOrEqual(-ceilingGain)
-    expect(curve[128]).toBeCloseTo(0, 5)
+      expect(profile.peakProtection.truePeakCeilingDbtp).toBeLessThanOrEqual(-1)
+      expect(profile.outputCeilingDbtp).toBe(profile.peakProtection.truePeakCeilingDbtp)
+      expect(profile.exportTarget.sampleRateHz).toBe(192000)
+      expect(profile.exportTarget.mp3BitrateKbps).toBe(320)
+      expect(profile.exportTarget.pcmBitDepth).toBe(24)
+      expect(profile.notes.join(' ')).not.toMatch(/true lossless|真无损|restore original master/i)
+    }
   })
 })

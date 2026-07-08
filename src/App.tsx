@@ -19,7 +19,6 @@ import {
   Waves,
 } from 'lucide-react'
 import {
-  createSoftLimiterCurve,
   dbToGain,
   getEnhancementProfile,
   getParameterRows,
@@ -80,8 +79,8 @@ const tiers: Array<{
   {
     id: 'studio',
     name: 'Studio Bloom',
-    short: '动态 / 空间 / 细节增强',
-    description: '默认音乐增强档，保留氛围并提升瞬态、声场和听感密度。',
+    short: '动态 / 清晰 / 稳定响度',
+    description: '默认音乐增强档，保持原声场并提升清晰度、响度稳定性和峰值安全。',
     meter: 68,
   },
   {
@@ -202,11 +201,7 @@ type EnhancementNodes = {
   air: BiquadFilterNode
   compressor: DynamicsCompressorNode
   makeupGain: GainNode
-  limiter: WaveShaperNode
-  stereoLeftMain: GainNode
-  stereoLeftCross: GainNode
-  stereoRightMain: GainNode
-  stereoRightCross: GainNode
+  peakGuard: DynamicsCompressorNode
 }
 
 function App() {
@@ -668,8 +663,6 @@ function configureEqBand(filter: BiquadFilterNode, band: EqBand, context: AudioC
 }
 
 function configureEnhancementNodes(context: AudioContext, nodes: EnhancementNodes, profile: EnhancementProfile) {
-  const ceilingGain = dbToGain(profile.outputCeilingDbtp)
-
   setAudioParam(nodes.inputTrim.gain, dbToGain(profile.inputTrimDb), context)
 
   nodes.highPass.type = 'highpass'
@@ -688,14 +681,11 @@ function configureEnhancementNodes(context: AudioContext, nodes: EnhancementNode
   setAudioParam(nodes.compressor.release, profile.compressor.releaseSeconds, context)
 
   setAudioParam(nodes.makeupGain.gain, dbToGain(profile.outputGainDb), context)
-  nodes.limiter.curve = createSoftLimiterCurve(profile.limiterDrive, ceilingGain)
-  nodes.limiter.oversample = '4x'
-
-  const spread = Math.max(0, (profile.stereoWidthAmount - 1) / 2)
-  setAudioParam(nodes.stereoLeftMain.gain, 1 + spread, context)
-  setAudioParam(nodes.stereoRightMain.gain, 1 + spread, context)
-  setAudioParam(nodes.stereoLeftCross.gain, -spread, context)
-  setAudioParam(nodes.stereoRightCross.gain, -spread, context)
+  setAudioParam(nodes.peakGuard.threshold, profile.outputCeilingDbtp, context)
+  setAudioParam(nodes.peakGuard.knee, 0, context)
+  setAudioParam(nodes.peakGuard.ratio, 20, context)
+  setAudioParam(nodes.peakGuard.attack, 0.003, context)
+  setAudioParam(nodes.peakGuard.release, 0.08, context)
 }
 
 function PlayerPanel({
@@ -777,13 +767,7 @@ function PlayerPanel({
       const air = context.createBiquadFilter()
       const compressor = context.createDynamicsCompressor()
       const makeupGain = context.createGain()
-      const limiter = context.createWaveShaper()
-      const stereoSplitter = context.createChannelSplitter(2)
-      const stereoMerger = context.createChannelMerger(2)
-      const stereoLeftMain = context.createGain()
-      const stereoLeftCross = context.createGain()
-      const stereoRightMain = context.createGain()
-      const stereoRightCross = context.createGain()
+      const peakGuard = context.createDynamicsCompressor()
       const analyser = context.createAnalyser()
 
       analyser.fftSize = 128
@@ -799,17 +783,8 @@ function PlayerPanel({
       presence.connect(air)
       air.connect(compressor)
       compressor.connect(makeupGain)
-      makeupGain.connect(limiter)
-      limiter.connect(stereoSplitter)
-      stereoSplitter.connect(stereoLeftMain, 0)
-      stereoSplitter.connect(stereoLeftCross, 1)
-      stereoSplitter.connect(stereoRightMain, 1)
-      stereoSplitter.connect(stereoRightCross, 0)
-      stereoLeftMain.connect(stereoMerger, 0, 0)
-      stereoLeftCross.connect(stereoMerger, 0, 0)
-      stereoRightMain.connect(stereoMerger, 0, 1)
-      stereoRightCross.connect(stereoMerger, 0, 1)
-      stereoMerger.connect(wetGain)
+      makeupGain.connect(peakGuard)
+      peakGuard.connect(wetGain)
       wetGain.connect(analyser)
       analyser.connect(context.destination)
 
@@ -826,11 +801,7 @@ function PlayerPanel({
         air,
         compressor,
         makeupGain,
-        limiter,
-        stereoLeftMain,
-        stereoLeftCross,
-        stereoRightMain,
-        stereoRightCross,
+        peakGuard,
       }
     }
 

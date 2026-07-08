@@ -30,215 +30,271 @@ export type EnhancementProfile = {
   body: EqBand
   presence: EqBand
   air: EqBand
+  eqBands: EqBand[]
   compressor: CompressorSettings
   inputTrimDb: number
   outputGainDb: number
   outputCeilingDbtp: number
-  limiterDrive: number
-  stereoWidthAmount: number
   waveformLift: number
+  wetGain: number
+  makeupGain: {
+    linear: number
+  }
+  peakProtection: {
+    truePeakCeilingDbtp: number
+    mode: string
+  }
+  stereoWidthPercent: number
+  loudnessTargetLufs: number
+  exportTarget: {
+    sampleRateHz: number
+    mp3BitrateKbps: number
+    pcmBitDepth: number
+  }
+  notes: string[]
 }
 
-export const enhancementProfiles: Record<EnhancementTierId, EnhancementProfile> = {
-  clean: {
+type ProfileInput = Omit<EnhancementProfile, 'eqBands' | 'makeupGain'>
+
+const exportTarget = {
+  sampleRateHz: 192000,
+  mp3BitrateKbps: 320,
+  pcmBitDepth: 24,
+}
+
+const baseNotes = [
+  '透明试听增强，保持原声场、原声道和干净峰值保护。',
+  '192kHz / 320kbps / 24-bit 是最高导出规格，不代表恢复源文件中不存在的信息。',
+]
+
+export const enhancementProfiles = [
+  createProfile({
     id: 'clean',
-    dspName: 'Clean Lift DSP',
-    listeningIntent: '明显清洁模式：压低浑浊感，让人声和主旋律更靠前。',
+    dspName: 'Clean Lift Hi-Fi DSP',
+    listeningIntent: '保守清洁：只做低频下潜保护、轻微浑浊控制和透明峰值保护。',
     highPass: {
-      frequencyHz: 26,
+      frequencyHz: 18,
       q: 0.707,
     },
     lowShelf: {
       label: '低频架',
       type: 'lowshelf',
-      frequencyHz: 104,
-      gainDb: 4,
+      frequencyHz: 90,
+      gainDb: 0.3,
     },
     body: {
-      label: '浑浊削减',
+      label: '低中频清理',
       type: 'peaking',
-      frequencyHz: 360,
-      gainDb: -3,
-      q: 1.05,
+      frequencyHz: 280,
+      gainDb: -0.6,
+      q: 0.9,
     },
     presence: {
       label: '存在感',
       type: 'peaking',
       frequencyHz: 3000,
-      gainDb: 3.4,
-      q: 0.95,
-    },
-    air: {
-      label: '空气感',
-      type: 'highshelf',
-      frequencyHz: 8200,
-      gainDb: 6,
-    },
-    compressor: {
-      thresholdDb: -26,
-      kneeDb: 15,
-      ratio: 3.3,
-      attackSeconds: 0.004,
-      releaseSeconds: 0.16,
-    },
-    inputTrimDb: -3.2,
-    outputGainDb: 4.2,
-    outputCeilingDbtp: -1,
-    limiterDrive: 1.24,
-    stereoWidthAmount: 1.12,
-    waveformLift: 15,
-  },
-  studio: {
-    id: 'studio',
-    dspName: 'Studio Bloom DSP',
-    listeningIntent: '强增强：低频更厚、主旋律更亮，整体响度明显前推。',
-    highPass: {
-      frequencyHz: 28,
-      q: 0.707,
-    },
-    lowShelf: {
-      label: '低频架',
-      type: 'lowshelf',
-      frequencyHz: 88,
-      gainDb: 6,
-    },
-    body: {
-      label: '低中频清理',
-      type: 'peaking',
-      frequencyHz: 410,
-      gainDb: -3.4,
-      q: 1.1,
-    },
-    presence: {
-      label: '存在感',
-      type: 'peaking',
-      frequencyHz: 2500,
-      gainDb: 5,
-      q: 0.86,
-    },
-    air: {
-      label: '空气感',
-      type: 'highshelf',
-      frequencyHz: 8800,
-      gainDb: 9,
-    },
-    compressor: {
-      thresholdDb: -30,
-      kneeDb: 14,
-      ratio: 4.2,
-      attackSeconds: 0.003,
-      releaseSeconds: 0.14,
-    },
-    inputTrimDb: -4.2,
-    outputGainDb: 5.6,
-    outputCeilingDbtp: -1,
-    limiterDrive: 1.42,
-    stereoWidthAmount: 1.22,
-    waveformLift: 22,
-  },
-  master: {
-    id: 'master',
-    dspName: 'Master Air DSP',
-    listeningIntent: '重母带听感：低频冲击、瞬态边缘和高频空气感都更强。',
-    highPass: {
-      frequencyHz: 30,
-      q: 0.707,
-    },
-    lowShelf: {
-      label: '低频架',
-      type: 'lowshelf',
-      frequencyHz: 76,
-      gainDb: 7,
-    },
-    body: {
-      label: '箱体削减',
-      type: 'peaking',
-      frequencyHz: 500,
-      gainDb: -4,
-      q: 1.15,
-    },
-    presence: {
-      label: '瞬态密度',
-      type: 'peaking',
-      frequencyHz: 1900,
-      gainDb: 5.8,
+      gainDb: 0.5,
       q: 0.8,
     },
     air: {
       label: '空气感',
       type: 'highshelf',
-      frequencyHz: 9800,
-      gainDb: 10.4,
+      frequencyHz: 12000,
+      gainDb: 0.6,
     },
     compressor: {
-      thresholdDb: -33,
-      kneeDb: 12,
-      ratio: 5.1,
-      attackSeconds: 0.0025,
-      releaseSeconds: 0.12,
+      thresholdDb: -17,
+      kneeDb: 18,
+      ratio: 1.15,
+      attackSeconds: 0.018,
+      releaseSeconds: 0.18,
     },
-    inputTrimDb: -4.8,
-    outputGainDb: 6.8,
-    outputCeilingDbtp: -1,
-    limiterDrive: 1.55,
-    stereoWidthAmount: 1.26,
-    waveformLift: 26,
-  },
-  hires: {
-    id: 'hires',
-    dspName: 'Hi-Res Vault DSP',
-    listeningIntent: '最强展示档：最大化解析感、冲击力、声场张力和响度前推。',
+    inputTrimDb: -1.6,
+    outputGainDb: 0.3,
+    outputCeilingDbtp: -1.5,
+    waveformLift: 8,
+    wetGain: 1,
+    peakProtection: {
+      truePeakCeilingDbtp: -1.5,
+      mode: '透明峰值保护',
+    },
+    stereoWidthPercent: 100,
+    loudnessTargetLufs: -15,
+    exportTarget,
+    notes: baseNotes,
+  }),
+  createProfile({
+    id: 'studio',
+    dspName: 'Studio Bloom Hi-Fi DSP',
+    listeningIntent: '默认清晰：轻微清理低中频，稳定响度，保持原声场。',
     highPass: {
-      frequencyHz: 30,
+      frequencyHz: 20,
       q: 0.707,
     },
     lowShelf: {
       label: '低频架',
       type: 'lowshelf',
-      frequencyHz: 72,
-      gainDb: 7.4,
+      frequencyHz: 82,
+      gainDb: 0.4,
     },
     body: {
       label: '低中频清理',
       type: 'peaking',
-      frequencyHz: 460,
-      gainDb: -4.2,
-      q: 1.08,
+      frequencyHz: 320,
+      gainDb: -0.8,
+      q: 0.95,
     },
     presence: {
-      label: '轮廓增强',
+      label: '存在感',
       type: 'peaking',
-      frequencyHz: 2400,
-      gainDb: 6.2,
-      q: 0.82,
+      frequencyHz: 2800,
+      gainDb: 0.8,
+      q: 0.78,
+    },
+    air: {
+      label: '空气感',
+      type: 'highshelf',
+      frequencyHz: 11800,
+      gainDb: 0.9,
+    },
+    compressor: {
+      thresholdDb: -19,
+      kneeDb: 18,
+      ratio: 1.25,
+      attackSeconds: 0.014,
+      releaseSeconds: 0.2,
+    },
+    inputTrimDb: -1.8,
+    outputGainDb: 0.4,
+    outputCeilingDbtp: -1.5,
+    waveformLift: 10,
+    wetGain: 1,
+    peakProtection: {
+      truePeakCeilingDbtp: -1.5,
+      mode: '透明峰值保护',
+    },
+    stereoWidthPercent: 100,
+    loudnessTargetLufs: -14,
+    exportTarget,
+    notes: baseNotes,
+  }),
+  createProfile({
+    id: 'master',
+    dspName: 'Master Air Hi-Fi DSP',
+    listeningIntent: '高规格预览：只提高稳定度和轮廓，保持原声场和干净瞬态。',
+    highPass: {
+      frequencyHz: 22,
+      q: 0.707,
+    },
+    lowShelf: {
+      label: '低频架',
+      type: 'lowshelf',
+      frequencyHz: 85,
+      gainDb: 0.7,
+    },
+    body: {
+      label: '低中频清理',
+      type: 'peaking',
+      frequencyHz: 340,
+      gainDb: -1,
+      q: 0.95,
+    },
+    presence: {
+      label: '存在感',
+      type: 'peaking',
+      frequencyHz: 3200,
+      gainDb: 1.1,
+      q: 0.76,
     },
     air: {
       label: '空气感',
       type: 'highshelf',
       frequencyHz: 11200,
-      gainDb: 12,
+      gainDb: 1,
     },
     compressor: {
-      thresholdDb: -34,
-      kneeDb: 13,
-      ratio: 5.4,
-      attackSeconds: 0.0025,
-      releaseSeconds: 0.16,
+      thresholdDb: -20.5,
+      kneeDb: 16,
+      ratio: 1.3,
+      attackSeconds: 0.012,
+      releaseSeconds: 0.22,
     },
-    inputTrimDb: -5.2,
-    outputGainDb: 7.2,
-    outputCeilingDbtp: -1,
-    limiterDrive: 1.65,
-    stereoWidthAmount: 1.3,
-    waveformLift: 30,
-  },
+    inputTrimDb: -2,
+    outputGainDb: 0.6,
+    outputCeilingDbtp: -1.5,
+    waveformLift: 12,
+    wetGain: 1,
+    peakProtection: {
+      truePeakCeilingDbtp: -1.5,
+      mode: '透明峰值保护',
+    },
+    stereoWidthPercent: 100,
+    loudnessTargetLufs: -14,
+    exportTarget,
+    notes: baseNotes,
+  }),
+  createProfile({
+    id: 'hires',
+    dspName: 'Hi-Res Vault Hi-Fi DSP',
+    listeningIntent: '最高规格导出预设：预览只做透明修正，参数目标拉到 192kHz / 320kbps / 24-bit。',
+    highPass: {
+      frequencyHz: 24,
+      q: 0.707,
+    },
+    lowShelf: {
+      label: '低频架',
+      type: 'lowshelf',
+      frequencyHz: 80,
+      gainDb: 0.5,
+    },
+    body: {
+      label: '低中频清理',
+      type: 'peaking',
+      frequencyHz: 360,
+      gainDb: -1.1,
+      q: 0.95,
+    },
+    presence: {
+      label: '轮廓增强',
+      type: 'peaking',
+      frequencyHz: 2600,
+      gainDb: 1,
+      q: 0.78,
+    },
+    air: {
+      label: '空气感',
+      type: 'highshelf',
+      frequencyHz: 12000,
+      gainDb: 1.2,
+    },
+    compressor: {
+      thresholdDb: -18,
+      kneeDb: 18,
+      ratio: 1.2,
+      attackSeconds: 0.015,
+      releaseSeconds: 0.24,
+    },
+    inputTrimDb: -2,
+    outputGainDb: 0.5,
+    outputCeilingDbtp: -1.5,
+    waveformLift: 12,
+    wetGain: 1,
+    peakProtection: {
+      truePeakCeilingDbtp: -1.5,
+      mode: '透明峰值保护',
+    },
+    stereoWidthPercent: 100,
+    loudnessTargetLufs: -14,
+    exportTarget,
+    notes: baseNotes,
+  }),
+]
+
+export function getEnhancementProfile(tierId: string) {
+  return enhancementProfiles.find((profile) => profile.id === tierId) ?? enhancementProfiles[1]
 }
 
-export function getEnhancementProfile(tierId: EnhancementTierId) {
-  return enhancementProfiles[tierId] ?? enhancementProfiles.hires
-}
-
-export function getParameterRows(tierId: EnhancementTierId) {
+export function getParameterRows(tierId: string) {
   const profile = getEnhancementProfile(tierId)
 
   return {
@@ -250,12 +306,16 @@ export function getParameterRows(tierId: EnhancementTierId) {
       `${profile.air.label} ${formatSignedDb(profile.air.gainDb)} @ ${formatFrequency(profile.air.frequencyHz)}`,
       `高通 ${formatFrequency(profile.highPass.frequencyHz)} / Q ${formatNumber(profile.highPass.q)}`,
       `输入 ${formatSignedDb(profile.inputTrimDb)}`,
-      `压缩 ${profile.compressor.thresholdDb} dB / ${formatNumber(profile.compressor.ratio)}:1`,
-      `Knee ${profile.compressor.kneeDb} dB / Attack ${formatMs(profile.compressor.attackSeconds)}`,
+      `压缩 ${formatSignedDb(profile.compressor.thresholdDb)} / ${formatNumber(profile.compressor.ratio)}:1`,
+      `Knee ${formatSignedDb(profile.compressor.kneeDb)} / Attack ${formatMs(profile.compressor.attackSeconds)}`,
       `Release ${formatMs(profile.compressor.releaseSeconds)}`,
-      `输出 ${formatSignedDb(profile.outputGainDb)} / 峰值 ${formatNumber(profile.outputCeilingDbtp)} dBTP`,
-      `软限幅 drive ${formatNumber(profile.limiterDrive)}x`,
-      `声场宽度 ${Math.round(profile.stereoWidthAmount * 100)}%`,
+      `输出 ${formatSignedDb(profile.outputGainDb)} / 峰值保护 ${formatSignedDb(profile.outputCeilingDbtp).replace(' dB', ' dBFS')}`,
+      `${profile.peakProtection.mode}，无削波`,
+      `声场宽度 ${profile.stereoWidthPercent}%`,
+      `响度目标 ${profile.loudnessTargetLufs} LUFS`,
+      `wet mix ${Math.round(profile.wetGain * 100)}%`,
+      '实时预览 Web Audio 32-bit float',
+      `导出目标 ${formatExportSampleRate(profile.exportTarget.sampleRateHz)} / ${profile.exportTarget.mp3BitrateKbps} kbps / ${profile.exportTarget.pcmBitDepth}-bit`,
     ],
   }
 }
@@ -264,18 +324,16 @@ export function dbToGain(db: number) {
   return 10 ** (db / 20)
 }
 
-export function createSoftLimiterCurve(drive: number, ceilingGain = dbToGain(-1), sampleCount = 2048) {
-  const curve = new Float32Array(sampleCount)
-  const safeDrive = Math.max(0.01, drive)
-  const safeCeiling = Math.min(1, Math.max(0.01, ceilingGain))
-  const normalizer = Math.tanh(safeDrive)
+function createProfile(input: ProfileInput): EnhancementProfile {
+  const eqBands = [input.lowShelf, input.body, input.presence, input.air]
 
-  for (let index = 0; index < curve.length; index += 1) {
-    const x = (index / (curve.length - 1)) * 2 - 1
-    curve[index] = (Math.tanh(x * safeDrive) / normalizer) * safeCeiling
+  return {
+    ...input,
+    eqBands,
+    makeupGain: {
+      linear: dbToGain(input.outputGainDb),
+    },
   }
-
-  return curve
 }
 
 function formatFrequency(frequencyHz: number) {
@@ -284,6 +342,10 @@ function formatFrequency(frequencyHz: number) {
   }
 
   return `${Math.round(frequencyHz)} Hz`
+}
+
+function formatExportSampleRate(frequencyHz: number) {
+  return `${Math.round(frequencyHz / 1000)} kHz`
 }
 
 function formatMs(seconds: number) {
