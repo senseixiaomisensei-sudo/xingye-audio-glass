@@ -406,7 +406,7 @@ function HeroBackdrop() {
       <video
         aria-hidden="true"
         autoPlay
-        className="hero-video absolute inset-0 h-full w-full scale-[1.08] object-cover"
+        className="hero-video absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-45"
         loop
         muted
         playsInline
@@ -416,12 +416,11 @@ function HeroBackdrop() {
       <img
         alt=""
         aria-hidden="true"
-        className="hero-poster absolute inset-0 h-full w-full scale-[1.08] object-cover mix-blend-screen"
+        className="hero-poster absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-20 mix-blend-screen"
         src={heroMedia.poster}
       />
       <div className="hero-gradient absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(180deg,rgba(5,5,7,0),#050507)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(154,248,255,0.08)_0%,transparent_50%)] mix-blend-soft-light" />
       <div className="spectrum-orbit spectrum-field" aria-hidden="true">
         {Array.from({ length: 30 }, (_, index) => (
           <span key={index} style={{ animationDelay: `${index * 55}ms` }} />
@@ -581,13 +580,13 @@ function ImportConsole({
   onTierChange: (value: TierId) => void
 }) {
   return (
-    <section id="import" className="liquid-panel glass-pane import-console p-4 transition-transform duration-300 hover:translate-y-[-2px]" aria-label="Pulse console">
+    <section id="import" className="liquid-panel glass-pane import-console p-4" aria-label="Pulse console">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm text-cyan-100/72">Pulse console</p>
           <h2 className="mt-1 text-xl font-medium text-white">导入和增强档位</h2>
         </div>
-        <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-white to-cyan-50 text-slate-950 shadow-lg shadow-cyan-400/30 transition-transform duration-200 hover:scale-105">
+        <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-slate-950 shadow-lg shadow-cyan-400/20">
           <Gauge size={21} />
         </span>
       </div>
@@ -621,7 +620,7 @@ function ImportConsole({
         {sourceMode === 'upload' ? (
           <label
             aria-labelledby="upload-tab"
-            className="upload-zone group"
+            className="upload-zone"
             id="upload-panel"
             role="tabpanel"
           >
@@ -632,8 +631,8 @@ function ImportConsole({
               accept=".mp3,.flac,.wav,.aac,.ogg,.m4a,.aiff,audio/*"
               onChange={(event) => onFileSelected(event.currentTarget.files?.[0] ?? null)}
             />
-            <UploadCloud size={24} className="transition-transform duration-200 group-hover:scale-110" />
-            <span className="mt-2 text-sm text-white transition-colors duration-200 group-hover:text-cyan-100">{fileName || '拖入或选择 MP3 / FLAC / WAV'}</span>
+            <UploadCloud size={24} />
+            <span className="mt-2 text-sm text-white">{fileName || '拖入或选择 MP3 / FLAC / WAV'}</span>
             <span className="mt-1 text-xs text-white/54">支持 MP3 / FLAC / WAV / AAC / OGG / M4A / AIFF</span>
           </label>
         ) : (
@@ -686,14 +685,14 @@ function TierButton({
     <button
       aria-label={`选择 ${tier.name} 档位`}
       aria-pressed={selected}
-      className={`tier-button group ${selected ? 'is-selected' : ''}`}
+      className={`tier-button ${selected ? 'is-selected' : ''}`}
       data-tier-id={tier.id}
       type="button"
       onClick={onSelect}
     >
       <span className="flex items-center justify-between gap-3">
         <span className="font-medium">{tier.name}</span>
-        <span className={`text-xs transition-colors duration-200 ${selected ? 'text-current/70' : 'text-current/58'}`}>{tier.meter}%</span>
+        <span className="text-xs text-current/58">{tier.meter}%</span>
       </span>
       <span className="tier-description mt-1 block text-xs leading-4 text-current/58">{tier.description}</span>
     </button>
@@ -1053,7 +1052,7 @@ function PlayerPanel({
   }, [activeProfile.waveformLift, getAudioElement, previewMode])
 
   return (
-    <aside className="liquid-panel glass-pane player-panel p-4 transition-transform duration-300 hover:translate-y-[-2px]" aria-label="沉浸播放器">
+    <aside className="liquid-panel glass-pane player-panel p-4" aria-label="沉浸播放器">
       <audio
         ref={audioRef}
         aria-label={audioSource.ariaLabel}
@@ -1087,7 +1086,7 @@ function PlayerPanel({
         )}
       </div>
 
-      <div className={`record-disc mx-auto mt-4 transition-shadow duration-300 ${isPlaying ? 'is-playing shadow-[0_0_60px_rgba(154,248,255,0.3)]' : ''}`}>
+      <div className={`record-disc mx-auto mt-4 ${isPlaying ? 'is-playing' : ''}`}>
         <div className="record-core">
           <Radio size={34} />
         </div>
@@ -1095,8 +1094,8 @@ function PlayerPanel({
 
       <div
         aria-label="实时音乐频谱音浪"
-        className={`live-waveform mt-4 grid h-20 grid-cols-12 items-end gap-1.5 rounded-2xl bg-black/26 px-3 py-3 transition-all duration-300 ${
-          isPlaying ? 'is-playing shadow-[inset_0_-20px_50px_rgba(154,248,255,0.15)]' : ''
+        className={`live-waveform mt-4 grid h-20 grid-cols-12 items-end gap-1.5 rounded-2xl bg-black/26 px-3 py-3 ${
+          isPlaying ? 'is-playing' : ''
         }`}
         data-live-waveform="true"
       >
@@ -1127,7 +1126,7 @@ function PlayerPanel({
           原音
         </button>
         <button
-          className="play-button group"
+          className="play-button"
           type="button"
           aria-label={isPlaying ? '暂停演示' : '播放演示'}
           onClick={activatePlayer}
@@ -1144,7 +1143,7 @@ function PlayerPanel({
         </button>
         <button
           aria-pressed={previewMode === 'after'}
-          className={`preview-button relative ${previewMode === 'after' ? 'is-active accent shadow-[0_0_30px_rgba(154,248,255,0.4)]' : ''}`}
+          className={`preview-button ${previewMode === 'after' ? 'is-active accent' : ''}`}
           type="button"
           onClick={() => onPreviewModeChange('after')}
         >
