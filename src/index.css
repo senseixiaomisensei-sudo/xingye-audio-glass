@@ -109,7 +109,7 @@ body {
 /* 液态玻璃模式 - iOS 风格高级动态效果 */
 .theme-liquid {
   /* 极致透明度 - 更强的穿透感 */
-  --glass-fill: rgba(255, 255, 255, 0.08);
+  --glass-fill: rgba(255, 255, 255, 0.10);
   --glass-fill-muted: rgba(255, 255, 255, 0.04);
   --glass-fill-strong: rgba(255, 255, 255, 0.12);
   --glass-edge: rgba(255, 255, 255, 0.3);
@@ -316,20 +316,19 @@ a:focus-visible {
               0 12px 32px rgba(154, 248, 255, 0.25);
 }
 
-/* 主面板 - 更强的浮动感 + 滚动交互边缘彩色反光 */
+/* 主面板 - 极致透明 + 边缘向内弧度 + 四角聚光 */
 .liquid-panel {
   overflow: hidden;
   border-radius: var(--radius-2xl);
   border: 1px solid var(--glass-edge);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)),
-              var(--glass-fill);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4),
-              inset 0 -1px 0 rgba(255, 255, 255, 0.05),
-              0 0 0 1px rgba(255, 255, 255, 0.05),
+  background: var(--glass-fill);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+              inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+              0 0 0 1px rgba(255, 255, 255, 0.03),
               var(--shadow-float-strong);
 }
 
-/* 内部光晕层 */
+/* 边缘向内弧度光晕 - 从边缘向内渐变 */
 .liquid-panel::before,
 .liquid-surface::before,
 .module-card::before,
@@ -341,13 +340,16 @@ a:focus-visible {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), transparent 30%),
-              linear-gradient(115deg, rgba(154, 248, 255, 0.08), transparent 50%);
-  opacity: 0.6;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.15), transparent 40%),
+    radial-gradient(ellipse at 0% 50%, rgba(255, 255, 255, 0.12), transparent 35%),
+    radial-gradient(ellipse at 100% 50%, rgba(255, 255, 255, 0.12), transparent 35%),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.1), transparent 30%);
+  opacity: 0.4;
   pointer-events: none;
 }
 
-/* 液态玻璃模式 - 滚动交互边缘彩色反光 */
+/* 液态玻璃模式 - 四角彩色光晕聚集 + 边缘线条 */
 .theme-liquid .liquid-panel::after,
 .theme-liquid .module-card::after,
 .theme-liquid .foundation-card::after,
@@ -355,43 +357,55 @@ a:focus-visible {
 .theme-liquid .research-panel::after {
   content: "";
   position: absolute;
-  inset: -1px;
+  inset: 0;
   z-index: 10;
   border-radius: inherit;
-  background: conic-gradient(
-    from calc(var(--scroll-progress) * 360deg),
-    rgba(154, 248, 255, 0.4) 0deg,
-    rgba(120, 167, 255, 0.3) 60deg,
-    rgba(255, 155, 215, 0.35) 120deg,
-    rgba(255, 180, 220, 0.3) 180deg,
-    rgba(154, 248, 255, 0.4) 240deg,
-    rgba(120, 167, 255, 0.35) 300deg,
-    rgba(154, 248, 255, 0.4) 360deg
-  );
+  background:
+    /* 四角彩色光晕 */
+    radial-gradient(circle at 0% 0%, rgba(154, 248, 255, 0.5), transparent 18%),
+    radial-gradient(circle at 100% 0%, rgba(255, 155, 215, 0.45), transparent 18%),
+    radial-gradient(circle at 0% 100%, rgba(177, 140, 255, 0.45), transparent 18%),
+    radial-gradient(circle at 100% 100%, rgba(154, 248, 255, 0.4), transparent 18%),
+    /* 边缘线条 */
+    linear-gradient(0deg, rgba(154, 248, 255, 0.3) 0%, transparent 25%),
+    linear-gradient(90deg, rgba(255, 155, 215, 0.25) 0%, transparent 25%),
+    linear-gradient(180deg, rgba(177, 140, 255, 0.25) 0%, transparent 25%),
+    linear-gradient(270deg, rgba(154, 248, 255, 0.3) 0%, transparent 25%);
   opacity: 0;
   pointer-events: none;
-  mask: linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box,
-                linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  padding: 1px;
+  mask:
+    linear-gradient(to right, #000 0 20px, transparent 20px calc(100% - 20px), #000 calc(100% - 20px)),
+    linear-gradient(to bottom, #000 0 20px, transparent 20px calc(100% - 20px), #000 calc(100% - 20px)),
+    radial-gradient(circle at 0% 0%, #000 0 25px, transparent 25px),
+    radial-gradient(circle at 100% 0%, #000 0 25px, transparent 25px),
+    radial-gradient(circle at 0% 100%, #000 0 25px, transparent 25px),
+    radial-gradient(circle at 100% 100%, #000 0 25px, transparent 25px);
+  mask-composite: add;
+  -webkit-mask:
+    linear-gradient(to right, #000 0 20px, transparent 20px calc(100% - 20px), #000 calc(100% - 20px)),
+    linear-gradient(to bottom, #000 0 20px, transparent 20px calc(100% - 20px), #000 calc(100% - 20px)),
+    radial-gradient(circle at 0% 0%, #000 0 25px, transparent 25px),
+    radial-gradient(circle at 100% 0%, #000 0 25px, transparent 25px),
+    radial-gradient(circle at 0% 100%, #000 0 25px, transparent 25px),
+    radial-gradient(circle at 100% 100%, #000 0 25px, transparent 25px);
+  -webkit-mask-composite: source-over;
   transition: opacity 600ms var(--ease);
-  animation: edge-shimmer 3s linear infinite;
+  animation: corner-shimmer 4s ease-in-out infinite;
 }
 
-/* 液态玻璃模式额外内部高光 */
+/* 液态玻璃模式额外内部高光 - 更柔和 */
 .theme-liquid .liquid-panel::before,
 .theme-liquid .liquid-surface::before,
 .theme-liquid .module-card::before,
 .theme-liquid .foundation-card::before,
 .theme-liquid .research-card::before,
 .theme-liquid .research-panel::before {
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.35), transparent 20%),
-              radial-gradient(ellipse at 85% 12%, rgba(255, 255, 255, 0.25), transparent 45%),
-              linear-gradient(115deg, rgba(154, 248, 255, 0.15), transparent 50%);
-  opacity: 0.7;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.25), transparent 35%),
+    radial-gradient(ellipse at 0% 50%, rgba(154, 248, 255, 0.12), transparent 30%),
+    radial-gradient(ellipse at 100% 50%, rgba(255, 155, 215, 0.1), transparent 30%),
+    radial-gradient(ellipse at 50% 100%, rgba(177, 140, 255, 0.08), transparent 25%);
+  opacity: 0.5;
   mix-blend-mode: overlay;
 }
 
@@ -405,7 +419,16 @@ a:focus-visible {
   opacity: 0.3;
 }
 
-/* 边缘彩色反光动画 - 滚动时激活 */
+/* 边缘彩色反光动画 - 四角光晕呼吸 */
+@keyframes corner-shimmer {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.2) saturate(1.3);
+  }
+}
+
 @keyframes edge-shimmer {
   0%, 100% {
     filter: brightness(1) saturate(1);
@@ -415,13 +438,14 @@ a:focus-visible {
   }
 }
 
-/* 滚动时显示边缘反光 */
+/* 滚动时显示边缘反光 + 增强四角光晕 */
 .theme-liquid.scrolling .liquid-panel::after,
 .theme-liquid.scrolling .module-card::after,
 .theme-liquid.scrolling .foundation-card::after,
 .theme-liquid.scrolling .research-card::after,
 .theme-liquid.scrolling .research-panel::after {
-  opacity: 0.6;
+  opacity: 0.8;
+  animation-duration: 3s;
 }
 
 /* Panel Dock 容器 - 外层发光容器 */
