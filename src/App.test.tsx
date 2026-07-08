@@ -13,6 +13,11 @@ describe('xingye audio glass homepage', () => {
   it('renders the from-zero A+B liquid glass homepage foundation', () => {
     render(<App />)
 
+    const shell = screen.getByRole('main')
+
+    expect(shell).toHaveAttribute('data-liquid-ui', 'ios26')
+    expect(screen.getByRole('banner')).toHaveAttribute('data-glass-depth', 'navigation')
+    expect(screen.getByLabelText('Liquid Glass 声场背景')).toHaveAttribute('data-glass-depth', 'ambient')
     expect(screen.getByRole('heading', { name: '星野的mp3' })).toBeInTheDocument()
     expect(screen.getByText('把任意音乐推到清澈高解析。')).toBeInTheDocument()
     expect(screen.getByText('Pulse console')).toBeInTheDocument()

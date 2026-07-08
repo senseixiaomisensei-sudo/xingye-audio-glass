@@ -301,6 +301,7 @@ function App() {
   return (
     <main
       className={`glass-mode-shell theme-${glassMode} min-h-screen overflow-x-hidden bg-[#050507] text-slate-50`}
+      data-liquid-ui="ios26"
       data-glass-mode={glassMode}
     >
       <GlassFilterDefs />
@@ -400,7 +401,7 @@ function Hero({
             后续再接音质增强、授权解析、队列、导出和账号体系。
           </p>
 
-          <div className="mt-6 grid max-w-2xl grid-cols-3 gap-2 sm:gap-3 min-[1200px]:mt-7">
+          <div className="metric-grid mt-6 grid max-w-2xl grid-cols-3 gap-2 sm:gap-3 min-[1200px]:mt-7">
             <Metric value="192kHz" label="最高采样率" />
             <Metric value="320kbps" label="目标比特率" />
             <Metric value="24-bit 位深" label="高解析导出" />
@@ -443,6 +444,11 @@ function Hero({
 function HeroBackdrop() {
   return (
     <div className="absolute inset-0 z-0 overflow-hidden bg-[#050507]">
+      <div
+        aria-label="Liquid Glass 声场背景"
+        className="liquid-material-field absolute inset-0"
+        data-glass-depth="ambient"
+      />
       <video
         aria-hidden="true"
         autoPlay
@@ -529,7 +535,7 @@ function Header({
   onGlassModeChange: (value: GlassMode) => void
 }) {
   return (
-    <header className="absolute inset-x-0 top-0 z-20">
+    <header className="absolute inset-x-0 top-0 z-20" data-glass-depth="navigation">
       <div className="site-header-inner mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-5 sm:px-6 lg:px-8">
         <a className="flex items-center gap-3" href="#home-heading" aria-label="星野的mp3">
           <span className="logo-mark">
