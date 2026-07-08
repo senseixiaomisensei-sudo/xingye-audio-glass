@@ -18,10 +18,19 @@ import {
   WandSparkles,
   Waves,
 } from 'lucide-react'
+import {
+  createSoftLimiterCurve,
+  dbToGain,
+  getEnhancementProfile,
+  getParameterRows,
+  type EnhancementProfile,
+  type EnhancementTierId,
+  type EqBand,
+} from './audioEnhancement'
 
 type SourceMode = 'upload' | 'platform'
 type PreviewMode = 'before' | 'after'
-type TierId = 'clean' | 'studio' | 'master' | 'hires'
+type TierId = EnhancementTierId
 type AudioSource = {
   kind: 'demo' | 'upload'
   title: string
@@ -184,10 +193,26 @@ const guardrails = [
 const barsBefore = [26, 38, 31, 46, 35, 52, 44, 58, 39, 48, 34, 43]
 const barsAfter = [45, 66, 54, 78, 61, 88, 72, 94, 58, 81, 64, 74]
 
+type EnhancementNodes = {
+  inputTrim: GainNode
+  highPass: BiquadFilterNode
+  lowShelf: BiquadFilterNode
+  body: BiquadFilterNode
+  presence: BiquadFilterNode
+  air: BiquadFilterNode
+  compressor: DynamicsCompressorNode
+  makeupGain: GainNode
+  limiter: WaveShaperNode
+  stereoLeftMain: GainNode
+  stereoLeftCross: GainNode
+  stereoRightMain: GainNode
+  stereoRightCross: GainNode
+}
+
 function App() {
   const [sourceMode, setSourceMode] = useState<SourceMode>('upload')
   const [previewMode, setPreviewMode] = useState<PreviewMode>('after')
-  const [selectedTier, setSelectedTier] = useState<TierId>('studio')
+  const [selectedTier, setSelectedTier] = useState<TierId>('hires')
   const [uploadedSource, setUploadedSource] = useState<AudioSource | null>(null)
   const [platformUrl, setPlatformUrl] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -195,7 +220,7 @@ function App() {
   const uploadedUrlRef = useRef<string | null>(null)
 
   const activeTier = useMemo(
-    () => tiers.find((tier) => tier.id === selectedTier) ?? tiers[1],
+    () => tiers.find((tier) => tier.id === selectedTier) ?? tiers[3],
     [selectedTier],
   )
 
@@ -300,6 +325,9 @@ function Hero({
   onSourceModeChange: (value: SourceMode) => void
   onTierChange: (value: TierId) => void
 }) {
+  const activeProfile = useMemo(() => getEnhancementProfile(selectedTier), [selectedTier])
+  const parameterRows = useMemo(() => getParameterRows(selectedTier), [selectedTier])
+
   return (
     <section className="relative overflow-hidden" aria-labelledby="home-heading">
       <HeroBackdrop />
@@ -353,6 +381,11 @@ function Hero({
             onExportRequest={onExportRequest}
             onPlayingChange={onPlayingChange}
             onPreviewModeChange={onPreviewModeChange}
+          />
+          <ParameterPanel
+            className="min-[1200px]:col-span-2"
+            profile={activeProfile}
+            rows={parameterRows}
           />
         </div>
       </div>
@@ -621,6 +654,50 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: 
   })
 }
 
+function setAudioParam(param: AudioParam, value: number, context: AudioContext) {
+  const now = context.currentTime
+  param.cancelScheduledValues(now)
+  param.setTargetAtTime(value, now, 0.018)
+}
+
+function configureEqBand(filter: BiquadFilterNode, band: EqBand, context: AudioContext) {
+  filter.type = band.type
+  setAudioParam(filter.frequency, band.frequencyHz, context)
+  setAudioParam(filter.gain, band.gainDb, context)
+  setAudioParam(filter.Q, band.q ?? 0.707, context)
+}
+
+function configureEnhancementNodes(context: AudioContext, nodes: EnhancementNodes, profile: EnhancementProfile) {
+  const ceilingGain = dbToGain(profile.outputCeilingDbtp)
+
+  setAudioParam(nodes.inputTrim.gain, dbToGain(profile.inputTrimDb), context)
+
+  nodes.highPass.type = 'highpass'
+  setAudioParam(nodes.highPass.frequency, profile.highPass.frequencyHz, context)
+  setAudioParam(nodes.highPass.Q, profile.highPass.q, context)
+
+  configureEqBand(nodes.lowShelf, profile.lowShelf, context)
+  configureEqBand(nodes.body, profile.body, context)
+  configureEqBand(nodes.presence, profile.presence, context)
+  configureEqBand(nodes.air, profile.air, context)
+
+  setAudioParam(nodes.compressor.threshold, profile.compressor.thresholdDb, context)
+  setAudioParam(nodes.compressor.knee, profile.compressor.kneeDb, context)
+  setAudioParam(nodes.compressor.ratio, profile.compressor.ratio, context)
+  setAudioParam(nodes.compressor.attack, profile.compressor.attackSeconds, context)
+  setAudioParam(nodes.compressor.release, profile.compressor.releaseSeconds, context)
+
+  setAudioParam(nodes.makeupGain.gain, dbToGain(profile.outputGainDb), context)
+  nodes.limiter.curve = createSoftLimiterCurve(profile.limiterDrive, ceilingGain)
+  nodes.limiter.oversample = '4x'
+
+  const spread = Math.max(0, (profile.stereoWidthAmount - 1) / 2)
+  setAudioParam(nodes.stereoLeftMain.gain, 1 + spread, context)
+  setAudioParam(nodes.stereoRightMain.gain, 1 + spread, context)
+  setAudioParam(nodes.stereoLeftCross.gain, -spread, context)
+  setAudioParam(nodes.stereoRightCross.gain, -spread, context)
+}
+
 function PlayerPanel({
   activeTier,
   audioSource,
@@ -646,12 +723,14 @@ function PlayerPanel({
   const analyserRef = useRef<AnalyserNode | null>(null)
   const dryGainRef = useRef<GainNode | null>(null)
   const wetGainRef = useRef<GainNode | null>(null)
+  const enhancementNodesRef = useRef<EnhancementNodes | null>(null)
   const lastPlayerActivationRef = useRef(Number.NEGATIVE_INFINITY)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
   const [audioError, setAudioError] = useState('')
   const [bars, setBars] = useState(previewMode === 'after' ? barsAfter : barsBefore)
   const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
+  const activeProfile = useMemo(() => getEnhancementProfile(activeTier.id), [activeTier.id])
 
   const getAudioElement = useCallback(
     () => audioRef.current ?? document.querySelector<HTMLAudioElement>('[data-player-audio="preview"]'),
@@ -690,45 +769,47 @@ function PlayerPanel({
       const source = context.createMediaElementSource(audio)
       const dryGain = context.createGain()
       const wetGain = context.createGain()
+      const inputTrim = context.createGain()
+      const highPass = context.createBiquadFilter()
       const lowShelf = context.createBiquadFilter()
+      const body = context.createBiquadFilter()
       const presence = context.createBiquadFilter()
       const air = context.createBiquadFilter()
       const compressor = context.createDynamicsCompressor()
       const makeupGain = context.createGain()
+      const limiter = context.createWaveShaper()
+      const stereoSplitter = context.createChannelSplitter(2)
+      const stereoMerger = context.createChannelMerger(2)
+      const stereoLeftMain = context.createGain()
+      const stereoLeftCross = context.createGain()
+      const stereoRightMain = context.createGain()
+      const stereoRightCross = context.createGain()
       const analyser = context.createAnalyser()
 
       analyser.fftSize = 128
       analyser.smoothingTimeConstant = 0.68
 
-      lowShelf.type = 'lowshelf'
-      lowShelf.frequency.value = 96
-      lowShelf.gain.value = 2.1
-
-      presence.type = 'peaking'
-      presence.frequency.value = 2600
-      presence.Q.value = 0.9
-      presence.gain.value = 1.8
-
-      air.type = 'highshelf'
-      air.frequency.value = 7200
-      air.gain.value = 4.4
-
-      compressor.threshold.value = -20
-      compressor.knee.value = 18
-      compressor.ratio.value = 2.35
-      compressor.attack.value = 0.006
-      compressor.release.value = 0.18
-
-      makeupGain.gain.value = 1.08
-
       source.connect(dryGain)
       dryGain.connect(analyser)
-      source.connect(lowShelf)
-      lowShelf.connect(presence)
+      source.connect(inputTrim)
+      inputTrim.connect(highPass)
+      highPass.connect(lowShelf)
+      lowShelf.connect(body)
+      body.connect(presence)
       presence.connect(air)
       air.connect(compressor)
       compressor.connect(makeupGain)
-      makeupGain.connect(wetGain)
+      makeupGain.connect(limiter)
+      limiter.connect(stereoSplitter)
+      stereoSplitter.connect(stereoLeftMain, 0)
+      stereoSplitter.connect(stereoLeftCross, 1)
+      stereoSplitter.connect(stereoRightMain, 1)
+      stereoSplitter.connect(stereoRightCross, 0)
+      stereoLeftMain.connect(stereoMerger, 0, 0)
+      stereoLeftCross.connect(stereoMerger, 0, 0)
+      stereoRightMain.connect(stereoMerger, 0, 1)
+      stereoRightCross.connect(stereoMerger, 0, 1)
+      stereoMerger.connect(wetGain)
       wetGain.connect(analyser)
       analyser.connect(context.destination)
 
@@ -736,11 +817,30 @@ function PlayerPanel({
       dryGainRef.current = dryGain
       wetGainRef.current = wetGain
       analyserRef.current = analyser
+      enhancementNodesRef.current = {
+        inputTrim,
+        highPass,
+        lowShelf,
+        body,
+        presence,
+        air,
+        compressor,
+        makeupGain,
+        limiter,
+        stereoLeftMain,
+        stereoLeftCross,
+        stereoRightMain,
+        stereoRightCross,
+      }
+    }
+
+    if (enhancementNodesRef.current) {
+      configureEnhancementNodes(context, enhancementNodesRef.current, activeProfile)
     }
 
     applyPreviewMode(previewMode)
     return context
-  }, [applyPreviewMode, getAudioElement, previewMode])
+  }, [activeProfile, applyPreviewMode, getAudioElement, previewMode])
 
   const handlePlayPause = useCallback(async () => {
     try {
@@ -794,6 +894,15 @@ function PlayerPanel({
     setAudioError('正在启动试听...')
     void handlePlayPause()
   }, [handlePlayPause])
+
+  useEffect(() => {
+    const context = audioContextRef.current
+    const nodes = enhancementNodesRef.current
+
+    if (context && nodes) {
+      configureEnhancementNodes(context, nodes, activeProfile)
+    }
+  }, [activeProfile])
 
   useEffect(() => {
     applyPreviewMode(previewMode)
@@ -860,7 +969,7 @@ function PlayerPanel({
           const start = index * bucketSize
           const bucket = samples.slice(start, start + bucketSize)
           const average = bucket.reduce((sum, value) => sum + value, 0) / Math.max(bucket.length, 1)
-          const modeLift = previewMode === 'after' ? 8 : 0
+          const modeLift = previewMode === 'after' ? activeProfile.waveformLift : 0
           return Math.round(Math.min(96, Math.max(14, 18 + (average / 255) * 74 + modeLift)))
         })
         setBars(nextBars)
@@ -871,7 +980,7 @@ function PlayerPanel({
 
     frameId = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(frameId)
-  }, [getAudioElement, previewMode])
+  }, [activeProfile.waveformLift, getAudioElement, previewMode])
 
   return (
     <aside className="liquid-panel glass-pane player-panel p-4" aria-label="沉浸播放器">
@@ -983,6 +1092,60 @@ function PlayerPanel({
         {audioError || exportStatus || '本地演示，不会上传文件'}
       </p>
     </aside>
+  )
+}
+
+function ParameterPanel({
+  className = '',
+  profile,
+  rows,
+}: {
+  className?: string
+  profile: EnhancementProfile
+  rows: ReturnType<typeof getParameterRows>
+}) {
+  return (
+    <section className={`parameter-panel ${className}`} aria-label="真实增强参数">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="parameter-kicker">DSP parameters</p>
+          <h3 className="mt-1 text-sm font-medium text-white">真实增强参数</h3>
+        </div>
+        <span className="parameter-badge">live</span>
+      </div>
+
+      <div className="parameter-grid mt-3">
+        <article className="parameter-stack">
+          <div className="flex items-center justify-between gap-2">
+            <p className="parameter-title">原音基线</p>
+            <span className="parameter-value">Before</span>
+          </div>
+          <div className="parameter-rows mt-2">
+            {rows.before.map((row) => (
+              <p className="parameter-row" key={row}>
+                {row}
+              </p>
+            ))}
+          </div>
+        </article>
+
+        <article className="parameter-stack is-after">
+          <div className="flex items-center justify-between gap-2">
+            <p className="parameter-title">增强后链路</p>
+            <span className="parameter-value">After</span>
+          </div>
+          <p className="mt-1 text-xs text-cyan-100/80">{profile.dspName}</p>
+          <p className="mt-1 text-xs leading-5 text-white/54">{profile.listeningIntent}</p>
+          <div className="parameter-rows mt-2">
+            {rows.after.map((row) => (
+              <p className="parameter-row" key={row}>
+                {row}
+              </p>
+            ))}
+          </div>
+        </article>
+      </div>
+    </section>
   )
 }
 

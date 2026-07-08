@@ -62,6 +62,23 @@ describe('xingye audio glass homepage', () => {
     expect(screen.getByText('真实 A/B 增强链路')).toBeInTheDocument()
   })
 
+  it('shows real before and after enhancement parameters for the active tier', () => {
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: '真实增强参数' })).toBeInTheDocument()
+    expect(screen.getByText('原音基线')).toBeInTheDocument()
+    expect(screen.getByText('旁路直通 0 dB')).toBeInTheDocument()
+    expect(screen.getByText('增强后链路')).toBeInTheDocument()
+    expect(screen.getByText('Hi-Res Vault DSP')).toBeInTheDocument()
+    expect(screen.getByText('低频架 +7.4 dB @ 72 Hz')).toBeInTheDocument()
+    expect(screen.getByText('轮廓增强 +6.2 dB @ 2.4 kHz')).toBeInTheDocument()
+    expect(screen.getByText('空气感 +12.0 dB @ 11.2 kHz')).toBeInTheDocument()
+    expect(screen.getByText('压缩 -34 dB / 5.4:1')).toBeInTheDocument()
+    expect(screen.getByText('输出 +7.2 dB / 峰值 -1.0 dBTP')).toBeInTheDocument()
+    expect(screen.getByText('软限幅 drive 1.7x')).toBeInTheDocument()
+    expect(screen.getByText('声场宽度 130%')).toBeInTheDocument()
+  })
+
   it('switches enhancement tiers and A/B player state', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -78,5 +95,20 @@ describe('xingye audio glass homepage', () => {
 
     await user.click(screen.getByRole('button', { name: '导出增强后的音频' }))
     expect(screen.getByText('Hi-Res Vault 已加入本地导出队列')).toBeInTheDocument()
+  })
+
+  it('updates the displayed enhancement parameters when the tier changes', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const masterButtons = screen.getAllByRole('button', { name: /Master Air/i })
+    await user.click(masterButtons[0])
+
+    expect(screen.getByText('Master Air DSP')).toBeInTheDocument()
+    expect(screen.getByText('低频架 +7.0 dB @ 76 Hz')).toBeInTheDocument()
+    expect(screen.getByText('瞬态密度 +5.8 dB @ 1.9 kHz')).toBeInTheDocument()
+    expect(screen.getByText('空气感 +10.4 dB @ 9.8 kHz')).toBeInTheDocument()
+    expect(screen.getByText('压缩 -33 dB / 5.1:1')).toBeInTheDocument()
+    expect(screen.getByText('输出 +6.8 dB / 峰值 -1.0 dBTP')).toBeInTheDocument()
   })
 })
