@@ -258,6 +258,46 @@ function App() {
     }
   }, [])
 
+  // ponytail: 滚动交互 - 液态玻璃边缘反光动画
+  useEffect(() => {
+    if (glassMode !== 'liquid') return
+
+    let rafId = 0
+    let scrollTimeout: number | null = null
+
+    const updateScrollProgress = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      const progress = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0
+
+      document.documentElement.style.setProperty('--scroll-progress', String(progress))
+      document.documentElement.classList.add('scrolling')
+
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      scrollTimeout = window.setTimeout(() => {
+        document.documentElement.classList.remove('scrolling')
+      }, 150)
+    }
+
+    const handleScroll = () => {
+      if (rafId) return
+      rafId = requestAnimationFrame(() => {
+        updateScrollProgress()
+        rafId = 0
+      })
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('touchmove', handleScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('touchmove', handleScroll)
+      if (rafId) cancelAnimationFrame(rafId)
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+    }
+  }, [glassMode])
+
   return (
     <main
       className={`glass-mode-shell theme-${glassMode} min-h-screen overflow-x-hidden bg-[#050507] text-slate-50`}

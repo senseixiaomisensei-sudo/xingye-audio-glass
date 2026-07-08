@@ -28,6 +28,9 @@
   --glass-edge-glow: rgba(154, 248, 255, 0.15);
   --glass-inner-glow: rgba(255, 255, 255, 0.3);
 
+  /* 滚动交互变量 - 用于边缘反光动画 */
+  --scroll-progress: 0;
+
   /* 圆角和阴影 */
   --radius-panel: 1.75rem;
   --radius-card: 1rem;
@@ -105,24 +108,24 @@ body {
 
 /* 液态玻璃模式 - iOS 风格高级动态效果 */
 .theme-liquid {
-  /* 更强的透明度和饱和度 */
-  --glass-fill: rgba(255, 255, 255, 0.15);
-  --glass-fill-muted: rgba(255, 255, 255, 0.08);
-  --glass-fill-strong: rgba(255, 255, 255, 0.25);
-  --glass-edge: rgba(255, 255, 255, 0.4);
-  --glass-edge-soft: rgba(255, 255, 255, 0.2);
-  --glass-highlight: rgba(255, 255, 255, 0.6);
+  /* 极致透明度 - 更强的穿透感 */
+  --glass-fill: rgba(255, 255, 255, 0.08);
+  --glass-fill-muted: rgba(255, 255, 255, 0.04);
+  --glass-fill-strong: rgba(255, 255, 255, 0.12);
+  --glass-edge: rgba(255, 255, 255, 0.3);
+  --glass-edge-soft: rgba(255, 255, 255, 0.15);
+  --glass-highlight: rgba(255, 255, 255, 0.5);
 
-  /* 更强的模糊和色彩增强 */
-  --blur-panel: 40px;
-  --blur-control: 22px;
-  --glass-backdrop: url(#liquid-glass-refraction) blur(var(--blur-panel)) saturate(200%) brightness(110%);
-  --glass-control-backdrop: url(#liquid-glass-refraction) blur(var(--blur-control)) saturate(200%) brightness(110%);
+  /* 强化模糊和色彩增强 */
+  --blur-panel: 60px;
+  --blur-control: 30px;
+  --glass-backdrop: url(#liquid-glass-refraction) blur(var(--blur-panel)) saturate(220%) brightness(112%);
+  --glass-control-backdrop: url(#liquid-glass-refraction) blur(var(--blur-control)) saturate(220%) brightness(112%);
 
   /* 动态折射和发光 */
-  --glass-refraction-opacity: 0.85;
-  --glass-edge-glow: rgba(154, 248, 255, 0.25);
-  --glass-inner-glow: rgba(255, 255, 255, 0.5);
+  --glass-refraction-opacity: 0.9;
+  --glass-edge-glow: rgba(154, 248, 255, 0.35);
+  --glass-inner-glow: rgba(255, 255, 255, 0.6);
 
   /* 更大的圆角 */
   --radius-panel: 2rem;
@@ -132,10 +135,10 @@ body {
   /* 多层阴影 + 彩色光晕 */
   --shadow-float: 0 30px 80px rgba(0, 0, 0, 0.4),
                   0 12px 24px rgba(0, 0, 0, 0.3),
-                  0 0 60px rgba(154, 248, 255, 0.1);
+                  0 0 60px rgba(154, 248, 255, 0.15);
   --shadow-float-strong: 0 40px 100px rgba(0, 0, 0, 0.5),
                          0 16px 32px rgba(0, 0, 0, 0.35),
-                         0 0 80px rgba(154, 248, 255, 0.15);
+                         0 0 80px rgba(154, 248, 255, 0.2);
 }
 
 /* 毛玻璃模式 - 标准 iOS 风格 */
@@ -313,7 +316,7 @@ a:focus-visible {
               0 12px 32px rgba(154, 248, 255, 0.25);
 }
 
-/* 主面板 - 更强的浮动感 */
+/* 主面板 - 更强的浮动感 + 滚动交互边缘彩色反光 */
 .liquid-panel {
   overflow: hidden;
   border-radius: var(--radius-2xl);
@@ -344,21 +347,51 @@ a:focus-visible {
   pointer-events: none;
 }
 
-/* 液态玻璃模式额外高光 */
+/* 液态玻璃模式 - 滚动交互边缘彩色反光 */
 .theme-liquid .liquid-panel::after,
-.theme-liquid .liquid-surface::after,
 .theme-liquid .module-card::after,
 .theme-liquid .foundation-card::after,
 .theme-liquid .research-card::after,
 .theme-liquid .research-panel::after {
   content: "";
   position: absolute;
-  inset: 1px;
+  inset: -1px;
+  z-index: 10;
   border-radius: inherit;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.4), transparent 15%),
-              radial-gradient(ellipse at 90% 10%, rgba(255, 255, 255, 0.3), transparent 40%);
-  opacity: 0.5;
+  background: conic-gradient(
+    from calc(var(--scroll-progress) * 360deg),
+    rgba(154, 248, 255, 0.4) 0deg,
+    rgba(120, 167, 255, 0.3) 60deg,
+    rgba(255, 155, 215, 0.35) 120deg,
+    rgba(255, 180, 220, 0.3) 180deg,
+    rgba(154, 248, 255, 0.4) 240deg,
+    rgba(120, 167, 255, 0.35) 300deg,
+    rgba(154, 248, 255, 0.4) 360deg
+  );
+  opacity: 0;
   pointer-events: none;
+  mask: linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 1px;
+  transition: opacity 600ms var(--ease);
+  animation: edge-shimmer 3s linear infinite;
+}
+
+/* 液态玻璃模式额外内部高光 */
+.theme-liquid .liquid-panel::before,
+.theme-liquid .liquid-surface::before,
+.theme-liquid .module-card::before,
+.theme-liquid .foundation-card::before,
+.theme-liquid .research-card::before,
+.theme-liquid .research-panel::before {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.35), transparent 20%),
+              radial-gradient(ellipse at 85% 12%, rgba(255, 255, 255, 0.25), transparent 45%),
+              linear-gradient(115deg, rgba(154, 248, 255, 0.15), transparent 50%);
+  opacity: 0.7;
   mix-blend-mode: overlay;
 }
 
@@ -370,6 +403,25 @@ a:focus-visible {
 .theme-frosted .research-card::before,
 .theme-frosted .research-panel::before {
   opacity: 0.3;
+}
+
+/* 边缘彩色反光动画 - 滚动时激活 */
+@keyframes edge-shimmer {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.15) saturate(1.2);
+  }
+}
+
+/* 滚动时显示边缘反光 */
+.theme-liquid.scrolling .liquid-panel::after,
+.theme-liquid.scrolling .module-card::after,
+.theme-liquid.scrolling .foundation-card::after,
+.theme-liquid.scrolling .research-card::after,
+.theme-liquid.scrolling .research-panel::after {
+  opacity: 0.6;
 }
 
 /* Panel Dock 容器 - 外层发光容器 */
