@@ -467,7 +467,7 @@ function HeroBackdrop() {
       />
       <div className="hero-gradient absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(180deg,rgba(5,5,7,0),#050507)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(154,248,255,0.08)_0%,transparent_50%)] mix-blend-soft-light" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(218,238,255,0.045)_0%,transparent_50%)] mix-blend-soft-light" />
       <div className="spectrum-orbit spectrum-field" aria-hidden="true">
         {Array.from({ length: 30 }, (_, index) => (
           <span key={index} style={{ animationDelay: `${index * 55}ms` }} />
@@ -502,12 +502,12 @@ function GlassFilterDefs() {
           seed="17"
           type="fractalNoise"
         />
-        <feGaussianBlur in="liquidNoise" result="liquidMap" stdDeviation="1.2" />
+        <feGaussianBlur in="liquidNoise" result="liquidMap" stdDeviation="0.85" />
         <feDisplacementMap
           in="SourceGraphic"
           in2="liquidMap"
           result="liquidShift"
-          scale="18"
+          scale="8"
           xChannelSelector="R"
           yChannelSelector="G"
         />
@@ -515,7 +515,7 @@ function GlassFilterDefs() {
           in="liquidShift"
           result="liquidGlass"
           type="matrix"
-          values="1.08 0 0 0 0.015  0 1.05 0 0 0.018  0 0 1.14 0 0.028  0 0 0 1 0"
+          values="1.025 0 0 0 0.006  0 1.02 0 0 0.006  0 0 1.035 0 0.01  0 0 0 1 0"
         />
       </filter>
       <filter id="frosted-glass-grain" x="-8%" y="-8%" width="116%" height="116%">
@@ -1133,7 +1133,7 @@ function PlayerPanel({
         )}
       </div>
 
-      <div className={`record-disc mx-auto mt-4 transition-shadow duration-300 ${isPlaying ? 'is-playing shadow-[0_0_60px_rgba(154,248,255,0.3)]' : ''}`}>
+      <div className={`record-disc mx-auto mt-4 transition-shadow duration-300 ${isPlaying ? 'is-playing shadow-[0_0_44px_rgba(218,238,255,0.14)]' : ''}`}>
         <div className="record-core">
           <Radio size={34} />
         </div>
@@ -1142,7 +1142,7 @@ function PlayerPanel({
       <div
         aria-label="实时音乐频谱音浪"
         className={`live-waveform mt-4 grid h-20 grid-cols-12 items-end gap-1.5 rounded-2xl bg-black/26 px-3 py-3 transition-all duration-300 ${
-          isPlaying ? 'is-playing shadow-[inset_0_-20px_50px_rgba(154,248,255,0.15)]' : ''
+          isPlaying ? 'is-playing shadow-[inset_0_-20px_50px_rgba(218,238,255,0.09)]' : ''
         }`}
         data-live-waveform="true"
       >
@@ -1190,7 +1190,7 @@ function PlayerPanel({
         </button>
         <button
           aria-pressed={previewMode === 'after'}
-          className={`preview-button relative ${previewMode === 'after' ? 'is-active accent shadow-[0_0_30px_rgba(154,248,255,0.4)]' : ''}`}
+          className={`preview-button relative ${previewMode === 'after' ? 'is-active accent shadow-[0_0_24px_rgba(218,238,255,0.16)]' : ''}`}
           type="button"
           onClick={() => onPreviewModeChange('after')}
         >
