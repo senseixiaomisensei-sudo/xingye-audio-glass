@@ -45,6 +45,7 @@ type AudioSource = {
 const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
 
 const heroMedia = {
+  liquidBackground: assetPath('/generated/liquid-glass-audio-bg-v2.png'),
   poster: assetPath('/motion-sites/audio-showcase.webp'),
   video: assetPath('/motion-sites/audio-showcase.mp4'),
 }
@@ -448,6 +449,12 @@ function HeroBackdrop() {
         aria-label="Liquid Glass 声场背景"
         className="liquid-material-field absolute inset-0"
         data-glass-depth="ambient"
+      />
+      <img
+        alt=""
+        aria-hidden="true"
+        className="hero-liquid-image absolute inset-0 h-full w-full scale-[1.04] object-cover"
+        src={heroMedia.liquidBackground}
       />
       <video
         aria-hidden="true"
