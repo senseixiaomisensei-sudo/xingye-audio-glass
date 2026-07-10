@@ -299,6 +299,85 @@ function App() {
     }
   }, [glassMode])
 
+  useEffect(() => {
+    if (glassMode !== 'liquid') return
+
+    const lensSelector = [
+      '.site-header-inner',
+      '.liquid-panel',
+      '.liquid-surface',
+      '.glass-button',
+      '.glass-mode-toggle',
+      '.tab-button',
+      '.tier-button',
+      '.preview-button',
+      '.play-button',
+      '.export-button',
+      '.upload-zone',
+      '.track-card',
+      '.live-waveform',
+      '.glass-input',
+      '.parameter-stack',
+    ].join(', ')
+
+    let activeSurface: HTMLElement | null = null
+    let pendingSurface: HTMLElement | null = null
+    let pendingX = 50
+    let pendingY = 12
+    let frameId = 0
+
+    const applyLensPosition = () => {
+      if (pendingSurface) {
+        pendingSurface.style.setProperty('--lens-x', `${pendingX}%`)
+        pendingSurface.style.setProperty('--lens-y', `${pendingY}%`)
+      }
+      frameId = 0
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch' || !(event.target instanceof Element)) return
+
+      const surface = event.target.closest<HTMLElement>(lensSelector)
+      if (!surface) return
+
+      if (activeSurface !== surface) {
+        activeSurface?.classList.remove('is-lens-active')
+        activeSurface = surface
+        activeSurface.classList.add('is-lens-active')
+      }
+
+      const bounds = surface.getBoundingClientRect()
+      pendingSurface = surface
+      pendingX = Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100))
+      pendingY = Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100))
+
+      if (!frameId) {
+        frameId = window.requestAnimationFrame(applyLensPosition)
+      }
+    }
+
+    const handlePointerOut = (event: PointerEvent) => {
+      if (!(event.target instanceof Element)) return
+
+      const surface = event.target.closest<HTMLElement>(lensSelector)
+      if (!surface) return
+      if (event.relatedTarget instanceof Node && surface.contains(event.relatedTarget)) return
+
+      surface.classList.remove('is-lens-active')
+      if (activeSurface === surface) activeSurface = null
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true })
+    window.addEventListener('pointerout', handlePointerOut, { passive: true })
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerout', handlePointerOut)
+      activeSurface?.classList.remove('is-lens-active')
+      if (frameId) window.cancelAnimationFrame(frameId)
+    }
+  }, [glassMode])
+
   return (
     <main
       className={`glass-mode-shell theme-${glassMode} min-h-screen overflow-x-hidden bg-[#050507] text-slate-50`}
@@ -503,18 +582,18 @@ function GlassFilterDefs() {
     >
       <filter id="liquid-glass-refraction" x="-20%" y="-20%" width="140%" height="140%">
         <feTurbulence
-          baseFrequency="0.018 0.042"
+          baseFrequency="0.014 0.034"
           numOctaves="2"
           result="liquidNoise"
           seed="17"
           type="fractalNoise"
         />
-        <feGaussianBlur in="liquidNoise" result="liquidMap" stdDeviation="0.85" />
+        <feGaussianBlur in="liquidNoise" result="liquidMap" stdDeviation="1.05" />
         <feDisplacementMap
           in="SourceGraphic"
           in2="liquidMap"
           result="liquidShift"
-          scale="8"
+          scale="11"
           xChannelSelector="R"
           yChannelSelector="G"
         />

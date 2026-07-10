@@ -4,14 +4,17 @@ import css from './index.css?raw'
 
 describe('liquid glass material tokens', () => {
   it('uses a more transparent liquid surface with stronger backdrop optics', () => {
-    expect(css).toContain('--lg-fill: rgba(9, 14, 22, 0.48);')
-    expect(css).toContain('--glass-fill: rgba(9, 14, 22, 0.46);')
-    expect(css).toContain('--glass-backdrop: blur(42px) saturate(178%) brightness(112%);')
+    expect(css).toContain('--lg-fill: rgba(5, 10, 17, 0.34);')
+    expect(css).toContain('--glass-fill: rgba(5, 10, 17, 0.32);')
+    expect(css).toContain(
+      '--glass-backdrop: blur(20px) saturate(150%) brightness(107%) contrast(103%);',
+    )
+    expect(css).not.toContain('backdrop: url(#liquid-glass-refraction)')
   })
 
   it('models edge reflection without colored stroke gradients', () => {
-    expect(css).toContain('--lg-edge-reflect: rgba(255, 255, 255, 0.48);')
-    expect(css).toContain('--lg-edge-reflect-soft: rgba(255, 255, 255, 0.18);')
+    expect(css).toContain('--lg-edge-reflect: rgba(255, 255, 255, 0.64);')
+    expect(css).toContain('--lg-edge-reflect-soft: rgba(255, 255, 255, 0.14);')
     expect(css).toContain('inset 0 1px 0 var(--lg-edge-reflect),')
     expect(css).not.toContain('conic-gradient(from 210deg, rgba(134, 244, 255, 0.22)')
     expect(css).not.toContain('rgba(255, 142, 209, 0.13)')
@@ -25,12 +28,19 @@ describe('liquid glass material tokens', () => {
     expect(css).toContain('mix-blend-mode: screen;')
   })
 
-  it('keeps liquid refraction subtle instead of heavy distortion', () => {
-    expect(app).toContain('stdDeviation="0.85"')
-    expect(app).toContain('scale="8"')
+  it('uses deeper liquid refraction without distorting foreground content', () => {
+    expect(app).toContain('stdDeviation="1.05"')
+    expect(app).toContain('scale="11"')
     expect(app).toContain(
       'values="1.025 0 0 0 0.006  0 1.02 0 0 0.006  0 0 1.035 0 0.01  0 0 0 1 0"',
     )
+  })
+
+  it('moves lens reflections with pointer position on interactive surfaces', () => {
+    expect(css).toContain('--lens-x: 50%;')
+    expect(css).toContain('.is-lens-active::before')
+    expect(app).toContain("pendingSurface.style.setProperty('--lens-x'")
+    expect(app).toContain("pendingSurface.style.setProperty('--lens-y'")
   })
 
   it('lets the mobile header wrap instead of pushing content off canvas', () => {
