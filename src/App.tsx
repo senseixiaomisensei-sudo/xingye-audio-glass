@@ -272,6 +272,7 @@ function App() {
       const progress = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0
 
       document.documentElement.style.setProperty('--scroll-progress', String(progress))
+      document.documentElement.style.setProperty('--scroll-sheen-shift', `${progress * 18}px`)
       document.documentElement.classList.add('scrolling')
 
       if (scrollTimeout) clearTimeout(scrollTimeout)
@@ -296,6 +297,9 @@ function App() {
       window.removeEventListener('touchmove', handleScroll)
       if (rafId) cancelAnimationFrame(rafId)
       if (scrollTimeout) clearTimeout(scrollTimeout)
+      document.documentElement.classList.remove('scrolling')
+      document.documentElement.style.removeProperty('--scroll-progress')
+      document.documentElement.style.removeProperty('--scroll-sheen-shift')
     }
   }, [glassMode])
 
@@ -306,6 +310,11 @@ function App() {
       '.site-header-inner',
       '.liquid-panel',
       '.liquid-surface',
+      '.module-card',
+      '.foundation-card',
+      '.research-card',
+      '.research-panel',
+      '.parameter-panel',
       '.glass-button',
       '.glass-mode-toggle',
       '.tab-button',
@@ -322,14 +331,23 @@ function App() {
 
     let activeSurface: HTMLElement | null = null
     let pendingSurface: HTMLElement | null = null
-    let pendingX = 50
-    let pendingY = 12
+    let pendingClientX = 0
+    let pendingClientY = 0
     let frameId = 0
 
     const applyLensPosition = () => {
       if (pendingSurface) {
-        pendingSurface.style.setProperty('--lens-x', `${pendingX}%`)
-        pendingSurface.style.setProperty('--lens-y', `${pendingY}%`)
+        const bounds = pendingSurface.getBoundingClientRect()
+        const lensX = Math.max(
+          0,
+          Math.min(100, ((pendingClientX - bounds.left) / bounds.width) * 100),
+        )
+        const lensY = Math.max(
+          0,
+          Math.min(100, ((pendingClientY - bounds.top) / bounds.height) * 100),
+        )
+        pendingSurface.style.setProperty('--lens-x', `${lensX}%`)
+        pendingSurface.style.setProperty('--lens-y', `${lensY}%`)
       }
       frameId = 0
     }
@@ -346,10 +364,9 @@ function App() {
         activeSurface.classList.add('is-lens-active')
       }
 
-      const bounds = surface.getBoundingClientRect()
       pendingSurface = surface
-      pendingX = Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100))
-      pendingY = Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100))
+      pendingClientX = event.clientX
+      pendingClientY = event.clientY
 
       if (!frameId) {
         frameId = window.requestAnimationFrame(applyLensPosition)
@@ -364,7 +381,12 @@ function App() {
       if (event.relatedTarget instanceof Node && surface.contains(event.relatedTarget)) return
 
       surface.classList.remove('is-lens-active')
-      if (activeSurface === surface) activeSurface = null
+      surface.style.removeProperty('--lens-x')
+      surface.style.removeProperty('--lens-y')
+      if (activeSurface === surface) {
+        activeSurface = null
+        pendingSurface = null
+      }
     }
 
     window.addEventListener('pointermove', handlePointerMove, { passive: true })
@@ -373,7 +395,11 @@ function App() {
     return () => {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerout', handlePointerOut)
-      activeSurface?.classList.remove('is-lens-active')
+      if (activeSurface) {
+        activeSurface.classList.remove('is-lens-active')
+        activeSurface.style.removeProperty('--lens-x')
+        activeSurface.style.removeProperty('--lens-y')
+      }
       if (frameId) window.cancelAnimationFrame(frameId)
     }
   }, [glassMode])
@@ -458,7 +484,7 @@ function Hero({
 
   return (
     <section className="relative overflow-hidden" aria-labelledby="home-heading">
-      <HeroBackdrop />
+      <HeroBackdrop glassMode={glassMode} />
       <Header glassMode={glassMode} onGlassModeChange={onGlassModeChange} />
 
       <div className="hero-shell relative z-10 mx-auto grid w-full max-w-[1440px] gap-6 px-4 pb-8 pt-24 sm:px-6 lg:px-8 min-[1200px]:min-h-[calc(100svh-104px)] min-[1200px]:grid-cols-[0.86fr_1.14fr] min-[1200px]:items-center min-[1200px]:gap-6 min-[1200px]:pb-8 min-[1200px]:pt-[5.5rem] xl:gap-8">
@@ -521,7 +547,7 @@ function Hero({
   )
 }
 
-function HeroBackdrop() {
+function HeroBackdrop({ glassMode }: { glassMode: GlassMode }) {
   return (
     <div className="absolute inset-0 z-0 overflow-hidden bg-[#050507]">
       <div
@@ -535,22 +561,32 @@ function HeroBackdrop() {
         className="hero-liquid-image absolute inset-0 h-full w-full scale-[1.04] object-cover"
         src={heroMedia.liquidBackground}
       />
-      <video
-        aria-hidden="true"
-        autoPlay
-        className="hero-video absolute inset-0 h-full w-full scale-[1.08] object-cover"
-        loop
-        muted
-        playsInline
-        poster={heroMedia.poster}
-        src={heroMedia.video}
-      />
       <img
         alt=""
         aria-hidden="true"
-        className="hero-poster absolute inset-0 h-full w-full scale-[1.08] object-cover mix-blend-screen"
-        src={heroMedia.poster}
+        className="hero-liquid-reflection absolute inset-0 h-full w-full object-cover"
+        src={heroMedia.liquidBackground}
       />
+      {glassMode === 'frosted' ? (
+        <>
+          <video
+            aria-hidden="true"
+            autoPlay
+            className="hero-video absolute inset-0 h-full w-full scale-[1.08] object-cover"
+            loop
+            muted
+            playsInline
+            poster={heroMedia.poster}
+            src={heroMedia.video}
+          />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="hero-poster absolute inset-0 h-full w-full scale-[1.08] object-cover mix-blend-screen"
+            src={heroMedia.poster}
+          />
+        </>
+      ) : null}
       <div className="hero-gradient absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(180deg,rgba(5,5,7,0),#050507)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(218,238,255,0.045)_0%,transparent_50%)] mix-blend-soft-light" />
@@ -661,7 +697,12 @@ function GlassModeToggle({
   onGlassModeChange: (value: GlassMode) => void
 }) {
   return (
-    <div className="glass-mode-toggle" role="group" aria-label="玻璃材质模式">
+    <div
+      className="glass-mode-toggle"
+      data-active={glassMode}
+      role="group"
+      aria-label="玻璃材质模式"
+    >
       <button
         aria-pressed={glassMode === 'liquid'}
         className={`glass-mode-option ${glassMode === 'liquid' ? 'is-active' : ''}`}
@@ -719,12 +760,17 @@ function ImportConsole({
           <p className="text-sm text-cyan-100/72">Pulse console</p>
           <h2 className="mt-1 text-xl font-medium text-white">导入和增强档位</h2>
         </div>
-        <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-white to-cyan-50 text-slate-950 shadow-lg shadow-cyan-400/30 transition-transform duration-200 hover:scale-105">
+        <span className="console-orb">
           <Gauge size={21} />
         </span>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 rounded-2xl bg-black/24 p-1" role="tablist" aria-label="导入来源">
+      <div
+        className="source-tabs mt-3 grid grid-cols-2 rounded-2xl bg-black/24 p-1"
+        data-active={sourceMode}
+        role="tablist"
+        aria-label="导入来源"
+      >
         <button
           aria-selected={sourceMode === 'upload'}
           aria-controls="upload-panel"
@@ -1241,15 +1287,21 @@ function PlayerPanel({
         ))}
       </div>
 
-      <div className="mt-3 h-2 rounded-full bg-white/12">
-        <div className="h-full rounded-full bg-cyan-200 transition-[width] duration-300" style={{ width: `${progress}%` }} />
+      <div className="player-progress-track mt-3 h-2 overflow-hidden rounded-full bg-white/12">
+        <div
+          className="player-progress-fill h-full rounded-full bg-cyan-200 transition-[width] duration-300"
+          style={{ width: `${progress}%` }}
+        />
       </div>
       <div className="mt-2 flex justify-between text-xs text-white/46">
         <span>{formatTime(currentTime)}</span>
         <span>-{formatTime(Math.max(duration - currentTime, 0) || 30)}</span>
       </div>
 
-      <div className="mt-3 grid grid-cols-[1fr_auto_1fr] gap-2">
+      <div
+        className="preview-controls mt-3 grid grid-cols-[1fr_auto_1fr] gap-2"
+        data-active={previewMode}
+      >
         <button
           aria-pressed={previewMode === 'before'}
           className={`preview-button ${previewMode === 'before' ? 'is-active' : ''}`}
@@ -1263,20 +1315,13 @@ function PlayerPanel({
           type="button"
           aria-label={isPlaying ? '暂停演示' : '播放演示'}
           onClick={activatePlayer}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault()
-              activatePlayer()
-            }
-          }}
-          onPointerDown={activatePlayer}
         >
           {isPlaying ? <Pause size={18} /> : <Play size={18} />}
           <span className="play-button-text">{isPlaying ? '暂停' : '播放'}</span>
         </button>
         <button
           aria-pressed={previewMode === 'after'}
-          className={`preview-button relative ${previewMode === 'after' ? 'is-active accent shadow-[0_0_24px_rgba(218,238,255,0.16)]' : ''}`}
+          className={`preview-button relative ${previewMode === 'after' ? 'is-active accent' : ''}`}
           type="button"
           onClick={() => onPreviewModeChange('after')}
         >

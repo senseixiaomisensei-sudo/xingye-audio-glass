@@ -1,35 +1,30 @@
-# Design QA: Liquid Lens
+# Design QA: Liquid Lens Round 3
 
 ## Evidence
 
-- Source visual truth: `C:\Users\Administrator\AppData\Local\Temp\xingye-audio-glass-liquid-ui-options\liquid-lens.png`
-- Desktop implementation: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-lens-implementation-desktop-final.png`
-- Mobile implementation: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-lens-implementation-mobile-final.png`
-- Full-view comparison: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-lens-comparison-full.png`
-- Focused control comparison: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-lens-comparison-focus.png`
+- Visual target: user-confirmed Figure 2 Liquid Lens direction from this thread.
+- Round 2 baseline: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-lens-round2-before.png`
+- Final desktop: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-round3-desktop-1536x1024.jpg`
+- Final mobile: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-round3-mobile-390x844.jpg`
+- Before/after comparison: `C:\Users\Administrator\AppData\Local\Temp\xingye-liquid-round2-vs-round3.png`
 - Viewports: Chrome 1536x1024 desktop and 390x844 mobile.
 - State: Liquid Glass, upload source, Hi-Res Vault tier, enhanced preview.
 
 ## Findings
 
 - No actionable P0, P1, or P2 issues remain.
-- Typography: hierarchy, weights, wrapping, and Chinese fallback rendering remain readable at both viewports. The implementation keeps the product's existing type system rather than copying rasterized reference text.
-- Spacing and layout: the desktop composition preserves the reference's copy, console, player, and parameter hierarchy. Mobile collapses to one column without overlap or horizontal overflow.
-- Colors and tokens: surfaces use a low-opacity neutral body with white/silver edge reflection. Colored outline strokes were removed; the only restrained color remains in content accents and the record artwork.
-- Image quality: the existing live background media and record treatment remain sharp. No new generated image or placeholder asset was introduced.
-- Copy and content: all existing labels, technical values, and product guardrails are preserved.
-- Interaction states: glass mode, source tabs, tier selection, A/B preview, hover, press, focus, and pointer-position lens reflection were exercised successfully.
-- Console and layout checks: no browser warnings/errors and zero horizontal overflow at both target viewports.
+- Material: desktop panels compute to `blur(12px)` and controls to `blur(6px)`; mobile uses `9px` and `5px`. Background texture remains legible through the large surfaces.
+- Edges: transparent borders remain structurally present, but visible reflection is limited to short neutral highlights on the top, left, and lower-right edges. No colored perimeter stroke is visible.
+- Hierarchy: primary console/export actions remain brightest. Segment thumbs, selected tiers, and A/B states use a dimmer translucent lens rather than an opaque silver fill.
+- Interaction: pointer-following highlights, pressed compression, mode switching, source tabs, tier selection, A/B preview, export feedback, and remote audio preview all work.
+- Performance: Liquid mode does not mount the hidden legacy video. Frosted mode mounts it only when selected.
+- Responsive: no horizontal overflow or clipped interactive text at 390px. Header, controls, panels, and player collapse cleanly.
+- Browser health: Chrome reported no console warnings or errors.
 
-## Patches Made
+## Verification
 
-- Lowered panel fill opacity and replaced uniform colored borders with directional neutral highlights.
-- Added meniscus depth, caustic reflection, pressed compression, hover lift, and pointer-following lens highlights.
-- Removed SVG URL backdrop filtering after Chrome showed purple/green distortion; retained stable blur, saturation, brightness, and contrast optics.
-- Tightened mobile wrapping and stable control dimensions.
-
-## Follow-up Polish
-
-- P3: the reference uses stronger full-perimeter highlights. The implementation intentionally keeps them quieter to satisfy the requested reflected edge rather than a visible stroke.
+- `npm test -- --maxWorkers=1 --no-file-parallelism`: 41 tests passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
 
 final result: passed
